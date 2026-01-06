@@ -16,6 +16,7 @@ import { versionsQueries } from "@entities/versions/api/versions.queries";
 import {
   useCreateVersions,
   useUpdateVersions,
+  useDeleteVersions,
 } from "@entities/versions/api/versions.mutaions";
 import { z } from "zod";
 import { format } from "date-fns";
@@ -78,6 +79,7 @@ export default function Versions() {
   });
   const { mutateAsync: createVersion } = useCreateVersions();
   const { mutateAsync: updateVersion } = useUpdateVersions();
+  const { mutateAsync: deleteVersion } = useDeleteVersions();
 
   const handleEdit = useCallback((version: Version) => {
     setEditingId(version.id);
@@ -93,6 +95,26 @@ export default function Versions() {
     // 폼으로 스크롤
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  const handleDelete = useCallback(
+    async (version: Version) => {
+      if (
+        !window.confirm(
+          `"${version.name}" 버전을 삭제하시겠습니까?\n삭제 시 해당 버전에 포함된 곡들의 레벨 정보도 함께 삭제됩니다.`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await deleteVersion({ id: version.id });
+        alert("버전이 삭제되었습니다.");
+      } catch (error: any) {
+        alert(`버전 삭제 실패: ${error.message}`);
+      }
+    },
+    [deleteVersion]
+  );
 
   const columns = useMemo(
     () => [
@@ -174,32 +196,55 @@ export default function Versions() {
         cell: (info) => {
           const row = info.row.original;
           return (
-            <button
-              onClick={() => handleEdit(row)}
-              className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-gray-800 rounded-full transition-all transform hover:-translate-y-0.5"
-              title="수정"
-              aria-label="수정"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEdit(row)}
+                className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-gray-800 rounded-full transition-all transform hover:-translate-y-0.5"
+                title="수정"
+                aria-label="수정"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleDelete(row)}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-800 rounded-full transition-all transform hover:-translate-y-0.5"
+                title="삭제"
+                aria-label="삭제"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            </div>
           );
         },
       }),
     ],
-    [handleEdit]
+    [handleEdit, handleDelete]
   );
 
   // 검색어로 필터링된 버전 목록

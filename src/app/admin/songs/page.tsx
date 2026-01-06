@@ -18,6 +18,7 @@ import { useSongs } from "@entities/songs/api/songs.queries";
 import {
   useCreateSong,
   useUpdateSong,
+  useDeleteSong,
 } from "@entities/songs/api/songs.mutaions";
 import { useArtists } from "@entities/artists/api/artists.queries";
 import { useCreateArtists } from "@entities/artists/api/artists.mutaions";
@@ -184,6 +185,7 @@ export default function Songs() {
   });
   const { mutateAsync: createSong } = useCreateSong();
   const { mutateAsync: updateSong } = useUpdateSong();
+  const { mutateAsync: deleteSong } = useDeleteSong();
   const { mutateAsync: createArtist } = useCreateArtists();
   const { mutateAsync: createTag } = useCreateTag();
 
@@ -359,6 +361,26 @@ export default function Songs() {
     [versions]
   );
 
+  const handleDelete = useCallback(
+    async (song: Song) => {
+      if (
+        !window.confirm(
+          `"${song.title}" 곡을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`
+        )
+      ) {
+        return;
+      }
+
+      try {
+        await deleteSong(song.id);
+        toast.success("곡이 삭제되었습니다.");
+      } catch (error: any) {
+        toast.error(`곡 삭제 실패: ${error.message}`);
+      }
+    },
+    [deleteSong]
+  );
+
   const columns = useMemo(
     () => [
       columnHelper.accessor("title", {
@@ -452,32 +474,55 @@ export default function Songs() {
         cell: (info) => {
           const row = info.row.original;
           return (
-            <button
-              onClick={() => handleEdit(row)}
-              className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-gray-800 rounded-full transition-all transform hover:-translate-y-0.5"
-              title="수정"
-              aria-label="수정"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEdit(row)}
+                className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-gray-800 rounded-full transition-all transform hover:-translate-y-0.5"
+                title="수정"
+                aria-label="수정"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </button>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={() => handleDelete(row)}
+                className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-gray-800 rounded-full transition-all transform hover:-translate-y-0.5"
+                title="삭제"
+                aria-label="삭제"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+              </button>
+            </div>
           );
         },
       }),
     ],
-    [handleEdit]
+    [handleEdit, handleDelete]
   );
 
   // 검색어로 필터링된 노래 목록

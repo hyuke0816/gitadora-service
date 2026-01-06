@@ -47,6 +47,6 @@ export const updateVersions = async (param: any): Promise<any> => {
  * @returns
  */
 export const deleteVersions = async (param: { id: number }): Promise<any> => {
-  const data: any = await apiClient.delete(`versions`, { json: param }).json();
+  const data: any = await apiClient.delete(`versions/${param.id}`).json();
   return data;
 };

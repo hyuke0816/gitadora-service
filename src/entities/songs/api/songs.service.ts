@@ -67,6 +67,17 @@ export const updateSong = async (param: any): Promise<any> => {
 };
 
 /**
+ * 노래 삭제
+ * @method DELETE
+ * @param id 노래 ID
+ * @returns
+ */
+export const deleteSong = async (id: number): Promise<any> => {
+  const data: any = await apiClient.delete(`songs/${id}`).json();
+  return data;
+};
+
+/**
  * 곡의 레벨 정보 조회
  * @method GET
  * @param songId 노래 ID

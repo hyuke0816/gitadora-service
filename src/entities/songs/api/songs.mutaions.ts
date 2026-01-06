@@ -5,6 +5,7 @@ import {
   createSong,
   updateSong,
   updateSongById,
+  deleteSong,
   createSongLevel,
   updateSongLevel,
   deleteSongLevel,
@@ -63,6 +64,20 @@ export const useUpdateSongById = () => {
       });
       await qc.refetchQueries({
         queryKey: songKeys.detail(variables.id),
+      });
+    },
+  });
+};
+
+export const useDeleteSong = () => {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteSong,
+    onSuccess: async () => {
+      await qc.invalidateQueries({
+        queryKey: songKeys.all,
+        refetchType: "active",
       });
     },
   });

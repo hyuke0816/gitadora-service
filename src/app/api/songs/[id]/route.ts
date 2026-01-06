@@ -164,3 +164,31 @@ export async function PUT(
 
   return NextResponse.json(song);
 }
+
+// DELETE /api/songs/[id] -> 곡 삭제
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  const id = parseInt(resolvedParams.id);
+
+  if (isNaN(id)) {
+    return NextResponse.json({ message: "Invalid id" }, { status: 400 });
+  }
+
+  try {
+    const song = await prisma.tb_song_informations.delete({
+      where: { id },
+    });
+
+    return NextResponse.json(song);
+  } catch (error: any) {
+    // Foreign key constraint failures are usually handled by Prisma if Cascade is set,
+    // but if something else fails:
+    return NextResponse.json(
+      { message: "Failed to delete song", error: error.message },
+      { status: 500 }
+    );
+  }
+}

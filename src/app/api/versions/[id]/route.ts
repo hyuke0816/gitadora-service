@@ -23,3 +23,29 @@ export async function GET(
 
   return NextResponse.json(version);
 }
+
+// DELETE /api/versions/[id] -> 버전 삭제
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const resolvedParams = await params;
+  const id = parseInt(resolvedParams.id);
+
+  if (isNaN(id)) {
+    return NextResponse.json({ message: "Invalid id" }, { status: 400 });
+  }
+
+  try {
+    const version = await prisma.tb_gitadora_versions.delete({
+      where: { id },
+    });
+
+    return NextResponse.json(version);
+  } catch (error: any) {
+    return NextResponse.json(
+      { message: "Failed to delete version", error: error.message },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GITADORA 스킬 데이터 업로드 북마크릿</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+        line-height: 1.6;
+        background: linear-gradient(to bottom right, #f0f9ff, #e0e7ff);
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #1e40af;
+        margin-bottom: 10px;
+      }
+      .bookmarklet {
+        background: #1e40af;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 8px;
+        display: inline-block;
+        text-decoration: none;
+        font-weight: bold;
+        margin: 20px 0;
+        cursor: move;
+        user-select: none;
+      }
+      .bookmarklet:hover {
+        background: #1e3a8a;
+      }
+      .code-block {
+        background: #f3f4f6;
+        padding: 15px;
+        border-radius: 6px;
+        border-left: 4px solid #1e40af;
+        margin: 20px 0;
+        overflow-x: auto;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+      }
+      .instructions {
+        background: #fef3c7;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #f59e0b;
+      }
+      .instructions ol {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .instructions li {
+        margin: 8px 0;
+      }
+      .warning {
+        background: #fee2e2;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        border-left: 4px solid #ef4444;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎮 GITADORA 스킬 데이터 업로드 북마크릿</h1>
+
+      <p>
+        이 북마크릿을 사용하여 GITADORA 스킬 뷰어 사이트에서 데이터를 자동으로
+        추출하고 업로드할 수 있습니다.
+      </p>
+
+      <div class="instructions">
+        <h2>📋 사용 방법</h2>
+        <ol>
+          <li>
+            아래 북마크릿 링크를 북마크바로 드래그하거나 북마크에 저장하세요
+          </li>
+          <li>
+            <strong>공식 GITADORA 홈페이지</strong>에서 본인의 스킬 페이지를
+            엽니다
+            <ul>
+              <li>
+                예:
+                https://p.eagate.573.jp/game/gfdm/gitadora_galaxywave_delta/p/playdata/...
+              </li>
+              <li>스킬 테이블이 표시된 페이지여야 합니다</li>
+            </ul>
+          </li>
+          <li>저장한 북마크를 클릭합니다</li>
+          <li>사용자 ID를 입력합니다 (내 서비스에서 생성한 사용자 ID)</li>
+          <li>데이터가 자동으로 추출되고 서버로 업로드됩니다</li>
+        </ol>
+      </div>
+
+      <h2>🔖 북마크릿 저장 방법</h2>
+
+      <div class="instructions">
+        <h3>📌 방법 1: 링크를 북마크바로 드래그 (가장 쉬운 방법)</h3>
+        <p>아래 버튼을 브라우저 북마크바로 드래그하세요:</p>
+        <a
+          href="javascript:void(!function(d){var s=d.createElement('script');s.type='text/javascript';s.src='https://localhost:30001/js/uploaddata.js';d.head.appendChild(s);}(document));"
+          class="bookmarklet"
+          draggable="true"
+          id="bookmarklet-link"
+        >
+          📤 GITADORA 스킬 업로드
+        </a>
+        <p style="font-size: 0.9em; color: #666; margin-top: 10px">
+          ⚠️ HTTPS 개발 서버 사용 시 위 링크를 클릭하면 자동으로 HTTPS URL로
+          변경됩니다.
+        </p>
+
+        <h3>📌 방법 2: 수동으로 북마크 추가</h3>
+        <ol>
+          <li>브라우저에서 북마크 추가 (Cmd/Ctrl + D 또는 북마크 메뉴)</li>
+          <li><strong>이름</strong>: <code>GITADORA 스킬 업로드</code></li>
+          <li><strong>URL</strong>: 아래 코드 전체를 복사해서 붙여넣기</li>
+        </ol>
+      </div>
+
+      <div class="code-block">
+        <strong
+          >로컬 개발 (HTTPS, localhost:30001) - npm run dev:https 실행
+          필요:</strong
+        ><br />
+        javascript:void(!function(d){var
+        s=d.createElement('script');s.type='text/javascript';s.src='https://localhost:30001/js/uploaddata.js';d.head.appendChild(s);}(document));
+      </div>
+
+      <div class="code-block">
+        <strong>프로덕션 (실제 도메인으로 변경 필요) - HTTPS 사용:</strong
+        ><br />
+        javascript:void(!function(d){var
+        s=d.createElement('script');s.type='text/javascript';s.src='https://YOUR_DOMAIN.com/js/uploaddata.js';d.head.appendChild(s);}(document));
+      </div>
+
+      <div class="warning">
+        <strong>⚠️ 중요:</strong>
+        <ul>
+          <li>
+            프로덕션 환경에서는 <code>YOUR_DOMAIN.com</code>을 실제 서버
+            도메인으로 변경하세요
+          </li>
+          <li>
+            예: <code>https://your-app.vercel.app</code> 또는
+            <code>https://your-domain.com</code>
+          </li>
+          <li>
+            <strong>중요:</strong> HTTPS 페이지(공식 홈페이지)에서는 HTTP
+            리소스를 로드할 수 없습니다 (Mixed Content 정책)
+          </li>
+          <li>
+            <strong>해결 방법 (3가지 중 선택):</strong>
+            <ul>
+              <li>
+                <strong>방법 1: HTTPS 개발 서버 사용 (권장)</strong><br />
+                <code>npm run dev:https</code> 명령으로 HTTPS 개발 서버 실행 후,
+                북마크릿 코드에서 <code>http://</code>를 <code>https://</code>로
+                변경
+              </li>
+              <li>
+                <strong>방법 2: 브라우저 Mixed Content 허용 (개발용)</strong
+                ><br />
+                Chrome:
+                <code
+                  >chrome://flags/#unsafely-treat-insecure-origin-as-secure</code
+                >
+                에서 <code>http://localhost:30001</code> 추가 후 브라우저 재시작
+              </li>
+              <li>
+                <strong>방법 3: 프로덕션 환경(HTTPS)에서 사용</strong><br />
+                실제 배포된 HTTPS 서버에서 사용하면 Mixed Content 문제 없음
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+
+      <div class="warning">
+        <strong>⚠️ 주의사항:</strong>
+        <ul>
+          <li>
+            배포 시 <code>YOUR_DOMAIN.com</code>을 실제 도메인으로 변경해야
+            합니다
+          </li>
+          <li>브라우저의 보안 정책에 따라 HTTPS가 필요할 수 있습니다</li>
+          <li>페이지 구조가 변경되면 스크립트 수정이 필요할 수 있습니다</li>
+        </ul>
+      </div>
+
+      <h2>🔧 설정</h2>
+      <p>
+        실제 서버에 배포할 때는 <code>public/js/uploaddata.js</code> 파일의
+        <code>API_BASE_URL</code>을 수정하세요:
+      </p>
+      <div class="code-block">
+        const API_BASE_URL = 'https://your-domain.com'; // 실제 도메인으로 변경
+      </div>
+
+      <h2>📝 추출하는 데이터</h2>
+      <ul>
+        <li>곡명 (제목) - <code>a.text_link</code></li>
+        <li>
+          악기 타입 - <code>div.seq_icon.part_DRUM/GUITAR/BASS/OPEN</code>
+        </li>
+        <li>
+          난이도 - <code>div.seq_icon.diff_BASIC/ADVANCED/EXTREME/MASTER</code>
+        </li>
+        <li>레벨 - <code>td.diff_cell</code> (예: 8.70)</li>
+        <li>달성률 - <code>td.achive_cell</code> (예: 98.30%)</li>
+        <li>스킬 점수 - <code>td.skill_cell</code> (예: 171.04 pts)</li>
+        <li>HOT/OTHER 구분 - URL 파라미터 또는 테이블 컨텍스트</li>
+        <li>버전명 - URL에서 자동 추출 (예: GALAXY WAVE DELTA)</li>
+      </ul>
+    </div>
+
+    <script>
+      // 북마크릿 링크가 클릭되었을 때 실제 서버 URL로 업데이트
+      document
+        .getElementById("bookmarklet-link")
+        .addEventListener("click", function (e) {
+          const currentHost = window.location.hostname;
+          const currentPort = window.location.port;
+          const protocol = window.location.protocol;
+          const baseUrl =
+            protocol +
+            "//" +
+            currentHost +
+            (currentPort ? ":" + currentPort : "");
+
+          this.href = `javascript:void(!function(d){var s=d.createElement('script');s.type='text/javascript';s.src='${baseUrl}/js/uploaddata.js';d.head.appendChild(s);}(document));`;
+        });
+
+      // 페이지 로드 시 현재 프로토콜에 맞게 북마크릿 URL 표시
+      window.addEventListener("DOMContentLoaded", function () {
+        const link = document.getElementById("bookmarklet-link");
+        const currentHost = window.location.hostname;
+        const currentPort = window.location.port;
+        const protocol = window.location.protocol;
+        const baseUrl =
+          protocol +
+          "//" +
+          currentHost +
+          (currentPort ? ":" + currentPort : "");
+
+        if (protocol === "https:") {
+          link.href = `javascript:void(!function(d){var s=d.createElement('script');s.type='text/javascript';s.src='${baseUrl}/js/uploaddata.js';d.head.appendChild(s);}(document));`;
+        }
+      });
+    </script>
+  </body>
+</html>

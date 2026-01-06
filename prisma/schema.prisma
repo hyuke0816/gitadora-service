@@ -1,0 +1,257 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model tb_song_informations {
+  id        Int      @id @default(autoincrement())
+  title     String
+  artist    String // 표시용 이름 (하위 호환성 유지)
+  artistId  Int? // 작곡가 ID (작곡가 테이블과 연결)
+  bpm       String?
+  version   String
+  youtubeUrl String? // YouTube 영상 링크
+  imageUrl  String? // 곡 이미지 URL
+  isExist   Boolean  @default(true)
+  isHot     Boolean  @default(false)
+  isLicense Boolean  @default(false) // 라이센스 곡 여부
+  isCover   Boolean  @default(false) // 커버 곡 여부
+  isLong    Boolean  @default(false) // 롱곡 여부
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relation 설정
+  artistInfo   tb_artist_informations? @relation(fields: [artistId], references: [id])
+  levels       tb_song_levels[]
+  tags         tb_song_tags[]
+
+  @@map("tb_song_informations")
+}
+
+model tb_gitadora_versions {
+  id        Int       @id @default(autoincrement())
+  name      String
+  startedAt DateTime
+  endedAt   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // relation 설정
+  songLevels   tb_song_levels[]
+
+  @@map("tb_gitadora_versions")
+}
+
+model tb_users {
+  id         Int      @id @default(autoincrement())
+  name       String   // 로그인용 이름
+  ingamename String?  // 게임 내 이름 (프로필 페이지에서 추출)
+  gitadoraId String?  @unique // GITADORA ID (0000-0000)
+  title      String?  // 칭호 (称号)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // relation 설정
+  comments     tb_comments[]
+  skillRecords tb_user_skill_records[]
+  skillHistory tb_user_skill_history[]
+
+  @@map("tb_users")
+}
+
+// 인증용 사용자 테이블 (관리자/일반 사용자)
+model tb_auth_users {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique // 로그인용 사용자명
+  password   String // 비밀번호 (해시)
+  role       UserRole @default(USER) // 사용자 역할
+  name       String? // 표시 이름
+  gameUserId Int? // tb_users 테이블의 id (USER 역할일 때 사용)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("tb_auth_users")
+}
+
+enum UserRole {
+  ADMIN // 관리자
+  USER // 일반 사용자
+}
+
+model tb_artist_informations {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 작곡가의 다른 이름들 (별명)
+  aliases tb_artist_aliases[]
+  // 이 작곡가의 노래들
+  songs   tb_song_informations[]
+
+  @@map("tb_artist_informations")
+}
+
+model tb_artist_aliases {
+  id        Int      @id @default(autoincrement())
+  artistId  Int
+  alias     String // 작곡가의 다른 이름
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relation 설정
+  artist tb_artist_informations @relation(fields: [artistId], references: [id], onDelete: Cascade)
+
+  @@unique([artistId, alias]) // 같은 작곡가의 중복 별명 방지
+  @@map("tb_artist_aliases")
+}
+
+model tb_song_levels {
+  id             Int            @id @default(autoincrement())
+  songId         Int
+  versionId      Int // 버전 ID
+  instrumentType InstrumentType // 악기 타입
+  difficulty     Difficulty // 난이도
+  level          Float // 레벨 값
+
+  // relation 설정
+  song    tb_song_informations @relation(fields: [songId], references: [id], onDelete: Cascade)
+  version tb_gitadora_versions @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  // 같은 곡, 같은 버전, 같은 악기, 같은 난이도는 중복 불가
+  @@unique([songId, versionId, instrumentType, difficulty])
+  @@map("tb_song_levels")
+}
+
+enum Difficulty {
+  BASIC
+  ADVANCED
+  EXTREME
+  MASTER
+}
+
+enum InstrumentType {
+  GUITAR // 기타
+  BASS // 베이스
+  DRUM // 드럼
+  OPEN // 오픈 (예전 버전용)
+}
+
+model tb_comments {
+  id          Int         @id @default(autoincrement())
+  commentType CommentType // 코멘트 타입 (작곡가, 노래 등)
+  targetId    Int // 대상 ID (작곡가 ID 또는 노래 ID)
+  content     String      @db.Text // 코멘트 내용
+  userId      Int? // 작성자 ID (선택적)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // relation 설정
+  user tb_users? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([commentType, targetId]) // 타입과 대상 ID로 빠른 조회를 위한 인덱스
+  @@map("tb_comments")
+}
+
+enum CommentType {
+  ARTIST // 작곡가 코멘트
+  SONG // 노래 코멘트
+  VERSION // 버전 코멘트 (추후 확장 가능)
+}
+
+model tb_tags {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique // 태그 키 (영어, 예: "rock", "pop", "electronic")
+  name      String // 태그 표시 이름 (현재는 한국어, 나중에 다국어 지원 시 사용)
+  color     String?  @default("#3b82f6") // 태그 색상 (HEX 코드, 기본값: 파란색)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relation 설정
+  songs tb_song_tags[]
+
+  @@map("tb_tags")
+}
+
+model tb_song_tags {
+  id        Int      @id @default(autoincrement())
+  songId    Int
+  tagId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // relation 설정
+  song tb_song_informations @relation(fields: [songId], references: [id], onDelete: Cascade)
+  tag  tb_tags              @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  // 같은 곡에 같은 태그는 중복 불가
+  @@unique([songId, tagId])
+  @@map("tb_song_tags")
+}
+
+// 사용자 스킬 기록 (플레이 데이터)
+model tb_user_skill_records {
+  id            Int            @id @default(autoincrement())
+  userId        Int // 사용자 ID
+  songTitle     String // 곡 제목 (문자열로 저장, 곡 정보 테이블과 조인용)
+  instrumentType InstrumentType // 악기 타입 (GUITAR, BASS, DRUM, OPEN)
+  difficulty    Difficulty // 난이도 (BASIC, ADVANCED, EXTREME, MASTER)
+  achievement   Float // 달성률 (0-100, 예: 98.30)
+  skillScore    Float // 스킬 점수 (예: 171.04)
+  isHot         Boolean        @default(false) // HOT 곡 여부
+  version       String         @default("GITADORA GALAXY WAVE DELTA") // 버전 정보
+  playedAt      DateTime   @default(now()) // 플레이한 날짜/시간
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // relation 설정
+  user          tb_users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 같은 사용자가 같은 곡/악기타입/난이도/HOT여부로 여러 번 플레이할 수 있음 (히스토리 추적)
+  @@index([userId, songTitle, instrumentType, difficulty, isHot])
+  @@index([userId, instrumentType, isHot])
+  @@index([userId, instrumentType, playedAt])
+  @@index([userId, playedAt])
+  @@map("tb_user_skill_records")
+}
+
+// 사용자 스킬 이력 (스킬 합계 변화 추적)
+model tb_user_skill_history {
+  id             Int            @id @default(autoincrement())
+  userId         Int // 사용자 ID
+  totalSkill     Float // 전체 스킬 점수 (예: 8330.97)
+  hotSkill       Float // HOT 스킬 점수 (예: 4086.68)
+  otherSkill     Float // OTHER 스킬 점수 (예: 4244.29)
+  instrumentType InstrumentType // 악기 타입
+  recordedAt     DateTime       @default(now()) // 기록된 날짜/시간
+  createdAt      DateTime       @default(now())
+
+  // relation 설정
+  user tb_users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, instrumentType, recordedAt])
+  @@map("tb_user_skill_history")
+}
+
+// 이벤트 관리 테이블
+model tb_events {
+  id        Int       @id @default(autoincrement())
+  name      String // 이벤트명
+  startedAt DateTime // 시작일
+  endedAt   DateTime? // 종료일 (선택적)
+  eventType String // 이벤트 타입
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tb_events")
+}

@@ -1,0 +1,168 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dark-bg: #0f172a;
+  --color-dark-surface: #1e293b;
+  --color-dark-border: #334155;
+  --color-dark-text: #f1f5f9;
+  --color-dark-text-secondary: #cbd5e1;
+}
+
+@layer components {
+  .input-style {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border: 1px solid rgb(209 213 219);
+    border-radius: 0.5rem;
+    background-color: white;
+    color: rgb(17 24 39);
+    transition-property: all;
+    transition-duration: 200ms;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+
+  .input-style::placeholder {
+    color: rgb(156 163 175);
+  }
+
+  .input-style:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(59 130 246), 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border-color: rgb(59 130 246);
+  }
+
+  .input-style:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+
+  /* 다크 모드 스타일 */
+  html.dark .input-style,
+  .dark .input-style {
+    border-color: rgb(75 85 99);
+    background-color: rgb(31 41 55);
+    color: rgb(229 231 235) !important;
+  }
+
+  html.dark .input-style::placeholder,
+  .dark .input-style::placeholder {
+    color: rgb(156 163 175);
+  }
+
+  html.dark .input-style:focus,
+  .dark .input-style:focus {
+    box-shadow: 0 0 0 2px rgb(96 165 250), 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    border-color: rgb(96 165 250);
+  }
+
+  html.dark .input-style:hover,
+  .dark .input-style:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+  }
+
+  /* 숫자 input 스피너 숨기기 */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Firefox에서 숫자 input 스피너 숨기기 */
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* input 타입별 다크 모드 텍스트 색상 강제 적용 */
+  html.dark .input-style[type="text"],
+  html.dark .input-style[type="number"],
+  html.dark .input-style[type="email"],
+  html.dark .input-style[type="password"],
+  html.dark .input-style[type="search"],
+  html.dark .input-style[type="tel"],
+  html.dark .input-style[type="url"],
+  .dark .input-style[type="text"],
+  .dark .input-style[type="number"],
+  .dark .input-style[type="email"],
+  .dark .input-style[type="password"],
+  .dark .input-style[type="search"],
+  .dark .input-style[type="tel"],
+  .dark .input-style[type="url"] {
+    color: rgb(229 231 235) !important;
+  }
+
+  /* select와 option 스타일 */
+  select {
+    color: rgb(17 24 39);
+  }
+
+  html.dark select,
+  .dark select {
+    color: rgb(229 231 235) !important;
+  }
+
+  select option {
+    background-color: white;
+    color: rgb(17 24 39);
+  }
+
+  html.dark select option,
+  .dark select option {
+    background-color: rgb(31 41 55);
+    color: rgb(229 231 235) !important;
+  }
+
+  /* input-style을 사용하는 select의 option도 스타일 적용 */
+  .input-style option {
+    background-color: white;
+    color: rgb(17 24 39);
+  }
+
+  html.dark .input-style option,
+  .dark .input-style option {
+    background-color: rgb(31 41 55);
+    color: rgb(229 231 235) !important;
+  }
+
+  /* 무지개 흐르는 애니메이션 (대각선 방향으로 계속 흐름) */
+  @keyframes rainbow-flow {
+    0% {
+      background-position: 50% 50%;
+    }
+    100% {
+      background-position: 0% 0%;
+    }
+  }
+
+  .rainbow-animated {
+    background: linear-gradient(
+      315deg,
+      #ff6bb3 0%,
+      #d8b4fe 8%,
+      #a78bfa 16%,
+      #818cf8 24%,
+      #60a5fa 32%,
+      #4ade80 40%,
+      #34d399 48%,
+      #a3e635 56%,
+      #fbbf24 64%,
+      #f59e0b 72%,
+      #fb923c 80%,
+      #fb7185 88%,
+      #ff6bb3 96%,
+      #d8b4fe 104%,
+      #a78bfa 112%,
+      #818cf8 120%,
+      #60a5fa 128%,
+      #4ade80 136%,
+      #34d399 144%,
+      #a3e635 152%,
+      #fbbf24 160%,
+      #f59e0b 168%,
+      #fb923c 176%,
+      #fb7185 184%,
+      #ff6bb3 192%,
+      #d8b4fe 200%
+    );
+    background-size: 200% 200%;
+    animation: rainbow-flow 4s linear infinite;
+  }
+}

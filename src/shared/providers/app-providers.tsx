@@ -1,0 +1,14 @@
+"use client";
+
+import { ThemeProvider } from "@/shared/components/ThemeProvider";
+import { Toaster } from "sonner";
+import { ReactNode } from "react";
+
+export function AppProviders({ children }: { children: ReactNode }) {
+  return (
+    <ThemeProvider>
+      {children}
+      <Toaster position="top-center" richColors />
+    </ThemeProvider>
+  );
+}

@@ -56,9 +56,7 @@ export default function UserSongs() {
   const { data, isLoading } = useSongs();
   const songs: Song[] = (data as Song[]) || [];
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "title", desc: false },
-  ]);
+  const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,

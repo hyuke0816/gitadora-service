@@ -37,6 +37,16 @@ const adminMenuItems = [
 
 const getUserMenuItems = (userId: string | null) => [
   {
+    title: "유저목록",
+    href: `/user/list`,
+    icon: "👥",
+  },
+  {
+    title: "노래정보",
+    href: `/user/songs`,
+    icon: "🎵",
+  },
+  {
     title: "버전정보",
     href: `/user/versions`,
     icon: "📦",
@@ -45,25 +55,6 @@ const getUserMenuItems = (userId: string | null) => [
     title: "작곡가정보",
     href: `/user/artists`,
     icon: "🎼",
-  },
-  {
-    title: "노래정보",
-    href: `/user/songs`,
-    icon: "🎵",
-  },
-  ...(userId
-    ? [
-        {
-          title: "내스킬정보",
-          href: `/user/${userId}/skill`,
-          icon: "📊",
-        },
-      ]
-    : []),
-  {
-    title: "유저목록",
-    href: `/user/list`,
-    icon: "👥",
   },
 ];
 
@@ -226,14 +217,14 @@ export function Header() {
           ) : null}
 
           {/* Language Switcher Button */}
-          <button
+          {/* <button
             className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
             onClick={() => {
               toast.info("다국어 설정 (준비 중)");
             }}
           >
             언어
-          </button>
+          </button> */}
 
           {/* Auth Buttons */}
           {isLoading ? (
@@ -250,14 +241,13 @@ export function Header() {
                 로그아웃
               </button>
             </>
-          ) : (
-            <Link
+          ) : /* <Link
               href="/login"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
             >
               로그인
-            </Link>
-          )}
+            </Link> */
+          null}
         </div>
 
         {/* Mobile Navigation Button */}
@@ -321,14 +311,13 @@ export function Header() {
                   {user.role === "ADMIN" ? "관리자" : "사용자"}
                 </div>
               </div>
-            ) : (
-              <Link
+            ) : /* <Link
                 href="/login"
                 className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
               >
                 로그인
-              </Link>
-            )}
+              </Link> */
+            null}
 
             {/* Menu Items */}
             {menuItems.length > 0 && (
@@ -360,7 +349,7 @@ export function Header() {
 
             {/* Language & Logout */}
             <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-              <button
+              {/* <button
                 className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-left"
                 onClick={() => {
                   toast.info("다국어 설정 (준비 중)");
@@ -368,7 +357,7 @@ export function Header() {
               >
                 <span className="text-xl">🌐</span>
                 <span>언어 설정</span>
-              </button>
+              </button> */}
 
               {user && (
                 <button

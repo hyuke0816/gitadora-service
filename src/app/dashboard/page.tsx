@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -21,14 +21,25 @@ interface DashboardStats {
 function UsageSection() {
   const [bookmarkletCode, setBookmarkletCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const bookmarkRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const origin = window.location.origin;
       const code = `javascript:void(!function(d){var s=d.createElement('script');s.type='text/javascript';s.src='${origin}/js/uploaddata.js';d.head.appendChild(s);}(document));`;
       setBookmarkletCode(code);
+
+      if (bookmarkRef.current) {
+        bookmarkRef.current.href = code;
+      }
     }
   }, []);
+
+  useEffect(() => {
+    if (bookmarkRef.current && bookmarkletCode) {
+      bookmarkRef.current.href = bookmarkletCode;
+    }
+  }, [bookmarkletCode]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(bookmarkletCode);
@@ -44,48 +55,66 @@ function UsageSection() {
       </h2>
 
       <div className="space-y-6">
-        <div>
-          <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">
-            1. 아래의 스크립트를 북마크에 추가하세요.
+        {/* 드래그 앤 드롭 설치 섹션 */}
+        <div className="flex flex-col items-center justify-center p-8 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-dashed border-blue-200 dark:border-blue-800">
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2 text-center">
+            가장 쉬운 방법: 드래그 앤 드롭
+          </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-center">
+            아래 버튼을 마우스로 잡고 브라우저 상단의{" "}
+            <span className="font-bold text-blue-600 dark:text-blue-400">
+              북마크 바
+            </span>
+            로 끌어서 놓으세요.
           </p>
 
-          <div className="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 p-4 mb-4 rounded-r">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-amber-500"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-amber-700 dark:text-amber-200">
-                  ※일부 브라우저(예: 사파리, 크롬 모바일)는 북마크를 직접 새로
-                  만드는 기능을 제공하지 않습니다. 그런 경우에는 아무 사이트나
-                  북마크에 등록한 뒤, 해당 북마크의 URL을 아래 스크립트로
-                  바꾸시면 됩니다.
-                </p>
-              </div>
-            </div>
-          </div>
+          <a
+            ref={bookmarkRef}
+            href="#"
+            onClick={(e) => e.preventDefault()}
+            className="flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-full shadow-lg hover:shadow-xl transform hover:-translate-y-1 transition-all cursor-move ring-4 ring-blue-500/20"
+            title="이 버튼을 북마크 바로 드래그하세요"
+          >
+            <span className="text-2xl">📤</span>
+            <span>GITADORA 스킬 업로드</span>
+          </a>
+
+          <p className="mt-6 text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 px-4 py-2 rounded-lg border border-gray-100 dark:border-gray-700">
+            💡 <strong>북마크 바가 안 보이나요?</strong>{" "}
+            <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-sans text-xs">
+              Ctrl
+            </kbd>{" "}
+            +{" "}
+            <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-sans text-xs">
+              Shift
+            </kbd>{" "}
+            +{" "}
+            <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-sans text-xs">
+              B
+            </kbd>{" "}
+            (Mac:{" "}
+            <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-sans text-xs">
+              Cmd
+            </kbd>
+            +
+            <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-sans text-xs">
+              Shift
+            </kbd>
+            +
+            <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-300 dark:border-gray-600 font-sans text-xs">
+              B
+            </kbd>
+            )를 눌러보세요.
+          </p>
         </div>
 
         <div>
-          <p className="text-base text-gray-600 dark:text-gray-400 mb-2">
-            현행 버전용 스크립트:{" "}
-            <span className="font-semibold text-gray-900 dark:text-gray-100">
-              GALAXY WAVE DELTA
-            </span>{" "}
-            (이 스크립트는 항상 현행 버전으로부터 스킬 데이터를 가져옵니다.
-            버전이 바뀌었을 때 별도로 북마크를 수정하지 않아도 됩니다.)
+          <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">
+            또는 수동으로 추가하기:
           </p>
+        </div>
 
+        <div>
           <div className="relative group">
             <div className="bg-gray-900 text-gray-300 p-4 rounded-lg font-mono text-sm break-all pr-12">
               {bookmarkletCode || "Loading..."}
@@ -127,6 +156,12 @@ function UsageSection() {
             </button>
           </div>
         </div>
+
+        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+          <p className="text-gray-700 dark:text-gray-300">
+            추가한 북마크를 GITADORA 웹 페이지에 로그인 후 적용하면 됩니다.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -141,11 +176,23 @@ function FutureFeaturesSection() {
       <div className="space-y-4">
         <div className="flex items-center space-x-3 text-lg text-gray-700 dark:text-gray-300">
           <span className="text-2xl">➡️</span>
-          <span>슈랜타워 기록</span>
+          <span>전곡 기록 저장</span>
         </div>
         <div className="flex items-center space-x-3 text-lg text-gray-700 dark:text-gray-300">
           <span className="text-2xl">➡️</span>
-          <span>타 사이트 기록 이전</span>
+          <span>플레이 카운트 기록 저장</span>
+        </div>
+        <div className="flex items-center space-x-3 text-lg text-gray-700 dark:text-gray-300">
+          <span className="text-2xl">➡️</span>
+          <span>슈랜타워 기록 저장</span>
+        </div>
+        <div className="flex items-center space-x-3 text-lg text-gray-700 dark:text-gray-300">
+          <span className="text-2xl">➡️</span>
+          <span>타 사이트 기록 이전 (베타유저 한정)</span>
+        </div>
+        <div className="flex items-center space-x-3 text-lg text-gray-700 dark:text-gray-300">
+          <span className="text-2xl">➡️</span>
+          <span>모바일 페이지 추가</span>
         </div>
         <div className="flex items-center space-x-3 text-lg text-gray-700 dark:text-gray-300">
           <span className="text-2xl">➡️</span>

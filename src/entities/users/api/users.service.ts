@@ -37,6 +37,10 @@ export interface SkillData {
   hotRecords: SkillRecord[];
   otherRecords: SkillRecord[];
   history: SkillHistory[];
+  user?: {
+    ingamename: string | null;
+    title: string | null;
+  };
 }
 
 /**

@@ -57,6 +57,7 @@ const columnHelper = createColumnHelper<Song>();
 
 interface FormValues {
   title: string;
+  titleIndex: string;
   artist: string;
   minBpm?: string;
   maxBpm?: string;
@@ -72,8 +73,49 @@ interface FormValues {
   isLong: boolean;
 }
 
+const titleIndexOptions = [
+  "숫자/기호",
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+  "P",
+  "Q",
+  "R",
+  "S",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+  "あ",
+  "か",
+  "さ",
+  "た",
+  "な",
+  "は",
+  "ま",
+  "や",
+  "ら",
+  "わ",
+];
+
 const initialState: FormValues = {
   title: "",
+  titleIndex: "",
   artist: "",
   minBpm: "",
   maxBpm: "",
@@ -91,6 +133,7 @@ const initialState: FormValues = {
 
 const formSchema = z.object({
   title: z.string().trim().min(1, "제목을 입력해주세요"),
+  titleIndex: z.string().optional(),
   artist: z.string().trim().min(1, "작곡가를 입력해주세요"),
   minBpm: z.string().optional(),
   maxBpm: z.string().optional(),
@@ -334,6 +377,7 @@ export default function Songs() {
 
       setFormValues({
         title: song.title,
+        titleIndex: (song as any).titleIndex || "",
         artist: song.artist,
         minBpm,
         maxBpm,
@@ -735,6 +779,7 @@ export default function Songs() {
     // 체크박스 필드들도 명시적으로 포함 (boolean 값으로 보장)
     const submitData = {
       title: validatedData.title,
+      titleIndex: validatedData.titleIndex || null,
       artist: validatedData.artist,
       bpm,
       versionId: formValues.versionId, // 버전 ID 전달
@@ -886,15 +931,30 @@ export default function Songs() {
                 </div>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  name="title"
-                  placeholder="제목"
-                  value={formValues.title}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    name="title"
+                    placeholder="제목"
+                    value={formValues.title}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                  />
+                  <select
+                    name="titleIndex"
+                    value={formValues.titleIndex}
+                    onChange={handleChange}
+                    className="w-32 px-2 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="">인덱스</option>
+                    {titleIndexOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="relative">
                   <input

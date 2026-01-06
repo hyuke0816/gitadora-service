@@ -206,40 +206,29 @@ export default function UserListPage() {
       />
 
       {/* 유저 목록 테이블 */}
-      <div className="bg-white dark:bg-gray-800 shadow-xl rounded-xl p-8 border border-gray-200 dark:border-gray-700">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {instrumentLabels[instrumentType]} 유저 목록
-          </h2>
+      <div className="shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-8 rounded-full bg-indigo-500"></div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {instrumentLabels[instrumentType]} 유저 목록
+            </h2>
+          </div>
 
-          <div className="flex items-center gap-2">
-            {/* 검색 입력 */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="유저명으로 검색..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setPagination({
-                    pageIndex: 0,
-                    pageSize: pagination.pageSize,
-                  });
-                }}
-                className="w-full sm:w-64 px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-              />
-              <svg
-                className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              placeholder="유저명으로 검색..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPagination({
+                  pageIndex: 0,
+                  pageSize: pagination.pageSize,
+                });
+              }}
+              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+            />
             <span className="text-sm text-gray-600 dark:text-gray-400">
               페이지당 항목 수:
             </span>
@@ -265,12 +254,12 @@ export default function UserListPage() {
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr
                   key={headerGroup.id}
-                  className="border-b-2 border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800"
+                  className="border-b-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700"
                 >
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className={`px-4 py-3 text-left font-bold text-gray-900 dark:text-gray-100 uppercase text-xs tracking-wider ${
+                      className={`px-4 py-4 text-left font-bold text-gray-800 dark:text-gray-200 uppercase text-xs tracking-wider ${
                         header.id === "rank"
                           ? "w-[10%]"
                           : header.id === "ingamename"
@@ -325,7 +314,7 @@ export default function UserListPage() {
                   return (
                     <tr
                       key={row.id}
-                      className={`border-b border-gray-200 dark:border-gray-700 transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 ${
+                      className={`border-b border-gray-200 dark:border-gray-700 transition-all duration-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:shadow-sm ${
                         idx % 2 === 0
                           ? "bg-white dark:bg-gray-800"
                           : "bg-gray-50 dark:bg-gray-800/50"

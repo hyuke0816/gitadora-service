@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { useSong } from "@entities/songs/api/songs.queries";
+import { useAuthMe } from "@entities/auth/api/auth.queries";
 import { versionsQueries } from "@entities/versions/api/versions.queries";
 import { apiClient } from "@shared/api/instances";
 import { useCreateSongLevel } from "@entities/songs/api/songs.mutaions";
@@ -91,6 +92,7 @@ export function UserSongDetail({
 }: UserSongDetailProps) {
   const router = useRouter();
   const { data: song, isLoading } = useSong(songId);
+  const { data: auth } = useAuthMe();
   const { data: versions = [] } = useQuery(
     versionsQueries.getAllVersions()
   ) as { data: any[] };
@@ -774,24 +776,38 @@ export function UserSongDetail({
         )}
 
         {/* 코멘트 작성 폼 */}
-        <form onSubmit={handleSubmitComment} className="mb-6">
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="코멘트를 입력하세요..."
-            rows={3}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 resize-none"
-          />
-          <div className="flex justify-end mt-2">
-            <button
-              type="submit"
-              disabled={!newComment.trim() || isSubmittingComment}
-              className="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        {auth?.authenticated ? (
+          <form onSubmit={handleSubmitComment} className="mb-6">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="코멘트를 입력하세요..."
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 resize-none"
+            />
+            <div className="flex justify-end mt-2">
+              <button
+                type="submit"
+                disabled={!newComment.trim() || isSubmittingComment}
+                className="px-6 py-2 bg-blue-600 dark:bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmittingComment ? "작성 중..." : "작성"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="mb-6 p-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-center border border-gray-200 dark:border-gray-700">
+            <p className="text-gray-600 dark:text-gray-400 mb-2">
+              코멘트를 작성하려면 로그인이 필요합니다.
+            </p>
+            {/* <button
+              onClick={() => router.push("/login")}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
             >
-              {isSubmittingComment ? "작성 중..." : "작성"}
-            </button>
+              로그인하기
+            </button> */}
           </div>
-        </form>
+        )}
       </div>
     </main>
   );

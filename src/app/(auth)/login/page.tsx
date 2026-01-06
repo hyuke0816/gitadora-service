@@ -152,16 +152,6 @@ export default function LoginPage() {
               <span>뒤로가기</span>
             </button>
           </div>
-
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-center text-gray-600 dark:text-gray-400 mb-2">
-              샘플 계정:
-            </p>
-            <div className="text-xs text-center space-y-1 text-gray-500 dark:text-gray-500">
-              <p>관리자: admin / admin</p>
-              <p>사용자: user / user</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

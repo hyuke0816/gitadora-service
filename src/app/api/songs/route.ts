@@ -34,6 +34,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const {
     title,
+    titleIndex,
     artist,
     bpm,
     version,
@@ -132,6 +133,7 @@ export async function PUT(req: Request) {
   const {
     id,
     title,
+    titleIndex,
     artist,
     bpm,
     version,
@@ -225,6 +227,7 @@ export async function PUT(req: Request) {
     where: { id },
     data: {
       title,
+      titleIndex: titleIndex || null,
       artist, // 표시용 이름 유지
       artistId, // 작곡가 ID 연결
       bpm,

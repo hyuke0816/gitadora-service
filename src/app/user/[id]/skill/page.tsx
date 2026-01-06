@@ -38,8 +38,6 @@ const getDifficultyShort = (difficulty: string): string => {
 export default function SkillPage() {
   const params = useParams();
   const userId = parseInt(params.id as string);
-  const user = useUserStore((state) => state.user);
-  const setUser = useUserStore((state) => state.setUser);
 
   // URL 쿼리 파라미터에서 버전 정보 가져오기
   const [versionParam, setVersionParam] = useState<string | null>(null);
@@ -140,29 +138,6 @@ export default function SkillPage() {
     }, 100);
   };
 
-  // 사용자 정보가 없으면 가져오기
-  useEffect(() => {
-    if (!user) {
-      getAuthMe()
-        .then((data) => {
-          if (data.authenticated && data.user) {
-            setUser({
-              id: data.user.userId,
-              gameUserId: data.user.gameUserId,
-              username: data.user.username,
-              role: data.user.role,
-              name: data.user.name || null,
-              ingamename: data.user.ingamename || null,
-              title: data.user.title || null,
-            });
-          }
-        })
-        .catch(() => {
-          // 에러 발생 시 무시
-        });
-    }
-  }, [user, setUser]);
-
   // 스킬 데이터 조회
   const { data: skillData, isLoading } = useUserSkill(userId, instrumentType, {
     historyId: selectedHistoryId || undefined,
@@ -197,32 +172,24 @@ export default function SkillPage() {
   // URL 디코딩 처리
   const pageTitle = versionParam
     ? decodeURIComponent(versionParam)
-    : "내 스킬 정보";
+    : skillData.user?.ingamename
+    ? `${skillData.user.ingamename}님의 스킬 정보`
+    : "스킬 정보";
 
   return (
     <div className="max-w-6xl mx-auto py-6">
       {/* 헤더 */}
       <div className="mb-8">
+        {skillData.user?.title && (
+          <div className="mb-3">
+            <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-medium">
+              {skillData.user.title}
+            </span>
+          </div>
+        )}
         <h1 className="text-4xl font-bold mb-2 tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
           {pageTitle}
         </h1>
-        {user && (
-          <div className="mb-2 flex items-center gap-3">
-            {user.title && (
-              <span className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg text-sm font-medium">
-                {user.title}
-              </span>
-            )}
-            {user.ingamename && (
-              <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                {user.ingamename}
-              </span>
-            )}
-          </div>
-        )}
-        <p className="text-gray-600 dark:text-gray-400 text-sm">
-          나의 스킬 데이터를 확인할 수 있습니다
-        </p>
       </div>
 
       {/* 악기 타입 선택 */}

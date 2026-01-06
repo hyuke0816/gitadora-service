@@ -18,6 +18,15 @@ export async function GET(
       return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
     }
 
+    // 사용자 정보 조회
+    const userInfo = await prisma.tb_users.findUnique({
+      where: { id: userId },
+      select: {
+        ingamename: true,
+        title: true,
+      },
+    });
+
     // 히스토리 ID가 있으면 해당 히스토리의 날짜를 가져옴
     let targetDate: Date | null = null;
     if (historyId) {
@@ -134,6 +143,7 @@ export async function GET(
       hotRecords,
       otherRecords,
       history,
+      user: userInfo,
     });
   } catch (error: any) {
     console.error("Error fetching skill data:", error);

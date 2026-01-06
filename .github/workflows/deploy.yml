@@ -1,0 +1,37 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Server
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            set -e
+            cd /home/bitnami/gitadora-service
+
+            git pull origin main
+            npm install
+
+            # Prisma (마이그레이션 있을 때만 반영)
+            npx prisma migrate deploy || true
+
+            npm run build
+
+            pm2 reload gitadora-service || pm2 start npm --name gitadora-service -- start
+          EOF

@@ -13,10 +13,10 @@
   // 설정: 서버 URL (실제 배포 시 변경 필요)
   // 로컬 개발 (HTTPS): https://localhost:30001 (포트 확인 필요!)
   // 프로덕션: 실제 서버 도메인으로 변경 (예: https://your-domain.com)
-  const API_BASE_URL = "https://localhost:30001"; // 로컬 개발 환경 (HTTPS)
+  // const API_BASE_URL = "https://localhost:30001"; // 로컬 개발 환경 (HTTPS)
 
   // 프로덕션 환경에서는 아래 주석을 해제하고 위의 localhost를 주석 처리하세요:
-  // const API_BASE_URL = "https://gitadora.info";
+  const API_BASE_URL = "https://gitadora.info";
 
   // 난이도 클래스명에서 난이도 추출
   function getDifficultyFromClass(className) {

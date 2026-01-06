@@ -43,7 +43,13 @@ export async function GET(
     return NextResponse.json({ message: "Song not found" }, { status: 404 });
   }
 
-  return NextResponse.json(song);
+  const processedSong = {
+    ...song,
+    imageUrl:
+      song.imageUrl || `/image/thumbnail/${encodeURIComponent(song.title)}.png`,
+  };
+
+  return NextResponse.json(processedSong);
 }
 
 // PUT /api/songs/[id] -> 곡 정보 수정

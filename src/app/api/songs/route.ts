@@ -20,7 +20,13 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(posts);
+  const processedPosts = posts.map((post) => ({
+    ...post,
+    imageUrl:
+      post.imageUrl || `/image/thumbnail/${encodeURIComponent(post.title)}.png`,
+  }));
+
+  return NextResponse.json(processedPosts);
 }
 
 // POST /api/songs -> 새 노래 생성

@@ -24,17 +24,38 @@ export async function GET(
   }
 
   // 해당 곡의 모든 유저 기록 조회
-  const records = await prisma.tb_user_skill_records.findMany({
+  const rawRecords = await prisma.tb_user_skill_records.findMany({
     where: {
       songTitle: song.title,
     },
     select: {
+      userId: true,
       instrumentType: true,
       difficulty: true,
       achievement: true,
       skillScore: true,
+      user: {
+        select: {
+          name: true,
+          ingamename: true,
+        },
+      },
     },
   });
+
+  // 유저별 최고 기록만 추출 (userId + instrumentType + difficulty 기준)
+  const uniqueRecordsMap = new Map<string, typeof rawRecords[0]>();
+
+  rawRecords.forEach((record) => {
+    const key = `${record.userId}-${record.instrumentType}-${record.difficulty}`;
+    const existing = uniqueRecordsMap.get(key);
+
+    if (!existing || record.achievement > existing.achievement) {
+      uniqueRecordsMap.set(key, record);
+    }
+  });
+
+  const records = Array.from(uniqueRecordsMap.values());
 
   // 난이도별, 악기별로 그룹화
   const distribution: Record<
@@ -47,6 +68,7 @@ export async function GET(
         avgSkillScore: number;
         records: number[];
         skillScores: number[];
+        points: { x: number; y: number; username: string }[];
       }
     >
   > = {};
@@ -66,12 +88,18 @@ export async function GET(
         avgSkillScore: 0,
         records: [],
         skillScores: [],
+        points: [],
       };
     }
 
     distribution[instrument][difficulty].count++;
     distribution[instrument][difficulty].records.push(record.achievement);
     distribution[instrument][difficulty].skillScores.push(record.skillScore);
+    distribution[instrument][difficulty].points.push({
+      x: record.skillScore,
+      y: record.achievement,
+      username: record.user.ingamename || record.user.name,
+    });
   });
 
   // 평균 계산

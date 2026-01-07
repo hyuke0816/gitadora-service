@@ -62,10 +62,10 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <a
-                  href="mailto:support@gitadora-service.com"
+                  href="mailto:gitadora.service@gmail.com"
                   className="text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
                 >
-                  support@gitadora-service.com
+                  gitadora.service@gmail.com
                 </a>
               </li>
               <li>

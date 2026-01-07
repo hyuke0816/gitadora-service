@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   useReactTable,
   getCoreRowModel,
@@ -62,7 +63,12 @@ export default function UserArtists() {
           const aliases = artist.aliases || [];
           return (
             <div>
-              <div className="font-medium">{info.getValue()}</div>
+              <Link
+                href={`/user/artists/${artist.id}`}
+                className="font-medium hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+              >
+                {info.getValue()}
+              </Link>
               {aliases.length > 0 && (
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   다른 명의: {aliases.map((a) => a.alias).join(", ")}
@@ -279,7 +285,12 @@ export default function UserArtists() {
                   <div className="flex flex-col gap-2">
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 break-words">
-                        {artist.name}
+                        <Link
+                          href={`/user/artists/${artist.id}`}
+                          className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
+                        >
+                          {artist.name}
+                        </Link>
                       </h3>
                       <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
                         {formatDate(artist.createdAt)}

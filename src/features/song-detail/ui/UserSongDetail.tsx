@@ -9,6 +9,15 @@ import {
   createColumnHelper,
   flexRender,
 } from "@tanstack/react-table";
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { useSong } from "@entities/songs/api/songs.queries";
 import { useAuthMe } from "@entities/auth/api/auth.queries";
@@ -42,6 +51,7 @@ interface SkillDistribution {
         avgAchievement: number;
         avgSkillScore: number;
         records: number[];
+        points: { x: number; y: number; username: string }[];
       }
     >
   >;
@@ -100,6 +110,13 @@ const difficultyLabels: Record<string, string> = {
   MASTER: "MAS",
 };
 
+const difficultyFillColors: Record<string, string> = {
+  BASIC: "#3b82f6",
+  ADVANCED: "#eab308",
+  EXTREME: "#ec4899",
+  MASTER: "#a855f7",
+};
+
 const instrumentLabels: Record<string, string> = {
   GUITAR: "GUITAR",
   BASS: "BASS",
@@ -124,6 +141,10 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
   const [isLoadingDistribution, setIsLoadingDistribution] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [selectedInstrument, setSelectedInstrument] =
+    useState<string>("GUITAR");
+  const [selectedDifficulty, setSelectedDifficulty] =
+    useState<string>("MASTER");
 
   // 페이지 진입 시 스크롤 최상단으로 이동
   useEffect(() => {
@@ -397,9 +418,9 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
   }
 
   return (
-    <main className="pt-0 pb-8 px-0 sm:py-8 sm:px-8 max-w-6xl mx-auto">
+    <main className="max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-4 px-4 sm:px-0 sm:mb-6 pt-4 sm:pt-0">
+      <div className="mb-4 sm:mb-6">
         <button
           onClick={() => router.back()}
           className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors"
@@ -499,7 +520,7 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  특성
+                  태그
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {song.isHot && (
@@ -593,72 +614,200 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
           )}
         </div>
 
+        {/* 필터링 UI */}
+        <div className="flex flex-col gap-4 mb-6">
+          {/* 악기 선택 */}
+          <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+            {["GUITAR", "BASS", "DRUM"].map((inst) => (
+              <button
+                key={inst}
+                onClick={() => setSelectedInstrument(inst)}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                  selectedInstrument === inst
+                    ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                }`}
+              >
+                {instrumentLabels[inst]}
+              </button>
+            ))}
+          </div>
+
+          {/* 난이도 선택 */}
+          <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-x-auto">
+            {["BASIC", "ADVANCED", "EXTREME", "MASTER"].map((diff) => (
+              <button
+                key={diff}
+                onClick={() => setSelectedDifficulty(diff)}
+                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap px-4 min-w-[60px] ${
+                  selectedDifficulty === diff
+                    ? `${difficultyColors[diff]} shadow-sm`
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                }`}
+              >
+                {difficultyLabels[diff]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {isLoadingDistribution ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             로딩 중...
           </div>
         ) : distribution && distribution.totalRecords > 0 ? (
           <div className="space-y-8">
-            {Object.keys(distribution.histogram).map((instrument) => (
-              <div key={instrument}>
-                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
-                  {instrumentLabels[instrument] || instrument}
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {Object.keys(distribution.histogram[instrument]).map(
-                    (difficulty) => {
-                      const bins =
-                        distribution.histogram[instrument][difficulty];
-                      const maxCount = Math.max(...bins, 1);
-                      const stats =
-                        distribution.distribution[instrument][difficulty];
+            {(() => {
+              const instrument = selectedInstrument;
+              const difficulty = selectedDifficulty;
+              const stats = distribution.distribution[instrument]?.[difficulty];
 
-                      return (
-                        <div
-                          key={difficulty}
-                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
-                        >
+              if (!stats) {
+                return (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                    해당 조건의 기록 데이터가 없습니다.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-lg text-gray-900 dark:text-gray-100">
+                        {instrumentLabels[instrument]}
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded text-sm font-semibold ${
+                          difficultyColors[difficulty] || ""
+                        }`}
+                      >
+                        {difficultyLabels[difficulty]}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      기록:{" "}
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {stats.count}
+                      </span>
+                      건 | 평균 달성률:{" "}
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {stats.avgAchievement.toFixed(2)}%
+                      </span>{" "}
+                      | 평균 스킬:{" "}
+                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                        {stats.avgSkillScore.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <div className="grid grid-cols-[40px_1fr] h-80 w-full min-w-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                      {/* Y축 레이블 (HTML) */}
+                      <div className="flex flex-col justify-between items-end pb-[30px] pt-[10px] pr-2 border-r border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 text-[10px] text-gray-500 font-medium select-none">
+                        <div className="leading-none">100</div>
+                        <div className="leading-none">80</div>
+                        <div className="leading-none">60</div>
+                        <div className="leading-none">40</div>
+                        <div className="leading-none">20</div>
+                        <div className="leading-none">0</div>
+                      </div>
+
+                      {/* 데이터 스크롤 영역 */}
+                      <div className="overflow-x-auto relative scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                        {stats.points && stats.points.length > 0 ? (
                           <div
-                            className={`inline-block px-3 py-1 rounded text-sm font-semibold mb-3 ${
-                              difficultyColors[difficulty] || ""
-                            }`}
+                            className="h-full"
+                            style={{
+                              width:
+                                Math.max(100, stats.points.length * 2) + "%", // 데이터 개수에 비례하여 너비 증가
+                              minWidth: "100%",
+                            }}
                           >
-                            {difficultyLabels[difficulty] || difficulty}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                            기록: {stats.count}건 | 평균:{" "}
-                            {stats.avgAchievement.toFixed(2)}%
-                          </div>
-                          <div className="space-y-1">
-                            {bins.map((count, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2"
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ScatterChart
+                                margin={{
+                                  top: 10,
+                                  right: 20,
+                                  bottom: 0,
+                                  left: 10,
+                                }}
                               >
-                                <div className="text-xs text-gray-500 dark:text-gray-400 w-12">
-                                  {index * 10}-{(index + 1) * 10}%
-                                </div>
-                                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-4 relative overflow-hidden">
-                                  <div
-                                    className="bg-blue-500 dark:bg-blue-400 h-full rounded-full transition-all"
-                                    style={{
-                                      width: `${(count / maxCount) * 100}%`,
-                                    }}
-                                  ></div>
-                                </div>
-                                <div className="text-xs text-gray-600 dark:text-gray-400 w-8 text-right">
-                                  {count}
-                                </div>
-                              </div>
-                            ))}
+                                <CartesianGrid
+                                  strokeDasharray="3 3"
+                                  vertical={true}
+                                  horizontal={true}
+                                  strokeOpacity={0.5}
+                                />
+                                <XAxis
+                                  type="number"
+                                  dataKey="x"
+                                  name="Skill"
+                                  domain={["auto", "auto"]}
+                                  tick={{ fontSize: 10 }}
+                                  height={30}
+                                  tickLine={false}
+                                  axisLine={false}
+                                />
+                                <YAxis
+                                  type="number"
+                                  dataKey="y"
+                                  domain={[0, 100]}
+                                  hide={true}
+                                />
+                                <RechartsTooltip
+                                  cursor={{ strokeDasharray: "3 3" }}
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      const data = payload[0].payload;
+                                      return (
+                                        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg text-sm z-50">
+                                          <p className="font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                            {data.username}
+                                          </p>
+                                          <div className="space-y-1 text-gray-600 dark:text-gray-400">
+                                            <p>
+                                              스킬:{" "}
+                                              <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                {data.x.toFixed(2)}
+                                              </span>
+                                            </p>
+                                            <p>
+                                              달성률:{" "}
+                                              <span className="font-medium text-gray-900 dark:text-gray-100">
+                                                {data.y.toFixed(2)}%
+                                              </span>
+                                            </p>
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  }}
+                                />
+                                <Scatter
+                                  name="Records"
+                                  data={stats.points}
+                                  fill={
+                                    difficultyFillColors[difficulty] ||
+                                    "#8884d8"
+                                  }
+                                  shape="circle"
+                                />
+                              </ScatterChart>
+                            </ResponsiveContainer>
                           </div>
-                        </div>
-                      );
-                    }
-                  )}
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-gray-400">
+                            데이터가 없습니다.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })()}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -686,7 +835,7 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
           <>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="min-w-full border-collapse text-sm whitespace-nowrap">
+              <table className="min-w-[950px] w-full border-collapse text-sm whitespace-nowrap">
                 <thead>
                   {/* 첫 번째 헤더 행: 악기 그룹 */}
                   <tr className="border-b bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">

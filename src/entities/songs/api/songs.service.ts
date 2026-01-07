@@ -3,10 +3,21 @@ import { apiClient } from "@shared/api/instances";
 /**
  * 모든 노래 조회
  * @method GET
+ * @param params 검색 파라미터 (title, version 등)
  * @returns
  */
-export const getAllSongs = async (): Promise<any> => {
-  const data: any = await apiClient.get(`songs`).json();
+export const getAllSongs = async (params?: {
+  title?: string;
+  version?: string;
+}): Promise<any> => {
+  const searchParams = new URLSearchParams();
+  if (params?.title) searchParams.append("title", params.title);
+  if (params?.version) searchParams.append("version", params.version);
+
+  const queryString = searchParams.toString();
+  const url = queryString ? `songs?${queryString}` : `songs`;
+
+  const data: any = await apiClient.get(url).json();
   return data;
 };
 
@@ -28,7 +39,9 @@ export const getSongInfoById = async (id: number): Promise<any> => {
  * @returns
  */
 export const getSongInfoByName = async (name: string): Promise<any> => {
-  const data: any = await apiClient.get(`songs/${name}`).json();
+  const data: any = await apiClient
+    .get(`songs?title=${encodeURIComponent(name)}`)
+    .json();
   return data;
 };
 

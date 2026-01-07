@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,16 +18,16 @@ import { getSkillColorStyle } from "@/shared/utils/skill.utils";
 import { useUserList } from "@/entities/users/api/users.queries";
 import type { UserList } from "@/entities/users/api/users.service";
 import {
-  InstrumentTypeSelector,
   instrumentLabels,
 } from "@/shared/components/InstrumentTypeSelector";
 
 const columnHelper = createColumnHelper<UserList>();
 
 export default function UserListPage() {
-  const [instrumentType, setInstrumentType] = useState<"GUITAR" | "DRUM">(
-    "GUITAR"
-  );
+  const searchParams = useSearchParams();
+  const instrumentType =
+    (searchParams.get("instrumentType") as "GUITAR" | "DRUM") || "GUITAR";
+
   const [searchQuery, setSearchQuery] = useState("");
   const [sorting, setSorting] = useState<SortingState>([
     { id: "totalSkill", desc: true },
@@ -38,16 +39,6 @@ export default function UserListPage() {
 
   // 유저 목록
   const { data: userList = [], isLoading } = useUserList(instrumentType);
-
-  // 악기 타입 변경 핸들러
-  const handleInstrumentTypeChange = useCallback(
-    (type: "GUITAR" | "DRUM") => {
-      if (type !== instrumentType) {
-        setInstrumentType(type);
-      }
-    },
-    [instrumentType]
-  );
 
   // 악기 타입 변경 시 관련 상태 초기화
   useEffect(() => {
@@ -189,14 +180,6 @@ export default function UserListPage() {
 
   return (
     <div className="max-w-6xl mx-auto pb-6">
-      {/* 악기 타입 선택 */}
-      <div className="mb-6 px-4 md:px-0">
-        <InstrumentTypeSelector
-          instrumentType={instrumentType}
-          onInstrumentTypeChange={handleInstrumentTypeChange}
-        />
-      </div>
-
       {/* 유저 목록 테이블 */}
       <div className="shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-4 md:p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">

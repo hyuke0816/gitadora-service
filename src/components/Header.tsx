@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { useUserStore } from "@/shared/stores/user.store";
 import { getAuthMe } from "@/entities/auth/api/auth.service";
+import { instrumentLabels } from "@/shared/components/InstrumentTypeSelector";
 
 const adminMenuItems = [
   {
@@ -61,6 +62,7 @@ const getUserMenuItems = (userId: string | null) => [
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
   const clearUser = useUserStore((state) => state.clearUser);
@@ -68,6 +70,27 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // 모바일 메뉴
   const menuRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  // 스크롤 감지하여 헤더 숨김/표시 처리
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // 최상단이거나 스크롤을 올릴 때 표시
+      if (currentScrollY < 10 || currentScrollY < lastScrollY.current) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY.current && currentScrollY > 10) {
+        // 스크롤을 내릴 때 숨김 (최상단 제외)
+        setIsVisible(false);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // 사용자 정보 조회
   useEffect(() => {
@@ -150,8 +173,27 @@ export function Header() {
     ? getUserMenuItems(userId)
     : [];
 
+  // 탭을 표시할 경로인지 확인
+  const isTabVisiblePage =
+    pathname === "/user/list" || /^\/user\/\d+\/skill$/.test(pathname || "");
+
+  // 현재 선택된 악기 (URL 파라미터 기준, 기본값 GUITAR)
+  const currentInstrument =
+    (searchParams?.get("instrumentType") as "GUITAR" | "DRUM") || "GUITAR";
+
+  const handleTabChange = (type: "GUITAR" | "DRUM") => {
+    // 기존 쿼리 파라미터 유지하면서 instrumentType만 변경
+    const newParams = new URLSearchParams(searchParams?.toString());
+    newParams.set("instrumentType", type);
+    router.replace(`${pathname}?${newParams.toString()}`);
+  };
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800">
+    <header
+      className={`sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 transition-transform duration-300 ${
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      }`}
+    >
       <div className="flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-3">
           {/* Logo */}
@@ -294,6 +336,34 @@ export function Header() {
           </button>
         </div>
       </div>
+
+      {/* 확장 탭 UI (조건부 렌더링) */}
+      {isTabVisiblePage && (
+        <div className="flex border-t border-gray-100 dark:border-gray-800">
+          {(["GUITAR", "DRUM"] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => handleTabChange(type)}
+              className="flex-1 relative py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+            >
+              <div className="flex justify-center items-center h-full">
+                <span
+                  className={`relative h-full flex items-center px-1 text-sm font-bold transition-colors ${
+                    currentInstrument === type
+                      ? "text-gray-900 dark:text-white"
+                      : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300"
+                  }`}
+                >
+                  {instrumentLabels[type]}
+                  {currentInstrument === type && (
+                    <div className="absolute bottom-[-13px] left-0 right-0 h-[4px] bg-blue-500 rounded-full" />
+                  )}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (

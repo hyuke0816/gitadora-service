@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   useReactTable,
   getCoreRowModel,
@@ -52,7 +53,17 @@ export default function UserVersions() {
       columnHelper.accessor("name", {
         header: "버전명",
         enableSorting: true,
-        cell: (info) => info.getValue(),
+        cell: (info) => {
+          const version = info.row.original;
+          return (
+            <Link
+              href={`/user/versions/${version.id}`}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-semibold transition-colors"
+            >
+              {info.getValue()}
+            </Link>
+          );
+        },
       }),
       columnHelper.accessor("startedAt", {
         header: "시작일",
@@ -265,29 +276,36 @@ export default function UserVersions() {
             table.getRowModel().rows.map((row) => {
               const version = row.original;
               return (
-                <div
+                <Link
                   key={row.id}
-                  className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                  href={`/user/versions/${version.id}`}
+                  className="block bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 break-words">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 break-words text-blue-600 dark:text-blue-400">
                       {version.name}
                     </h3>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-400 mt-3 bg-gray-50 dark:bg-gray-700/30 p-3 rounded-lg">
                     <div>
-                      <span className="block text-xs text-gray-500 dark:text-gray-500 mb-1">시작일</span>
-                      <span className="font-medium">{formatDate(version.startedAt)}</span>
+                      <span className="block text-xs text-gray-500 dark:text-gray-500 mb-1">
+                        시작일
+                      </span>
+                      <span className="font-medium">
+                        {formatDate(version.startedAt)}
+                      </span>
                     </div>
                     <div>
-                      <span className="block text-xs text-gray-500 dark:text-gray-500 mb-1">종료일</span>
+                      <span className="block text-xs text-gray-500 dark:text-gray-500 mb-1">
+                        종료일
+                      </span>
                       <span className="font-medium">
                         {version.endedAt ? formatDate(version.endedAt) : "-"}
                       </span>
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })
           )}

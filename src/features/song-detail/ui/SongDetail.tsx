@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { useSong } from "@entities/songs/api/songs.queries";
+import { getSongInfoByName } from "@entities/songs/api/songs.service";
 import { useUpdateSongById } from "@entities/songs/api/songs.mutaions";
 import {
   useCreateSongLevel,
@@ -95,6 +96,7 @@ export function SongDetail({
     isCover: false,
     isLong: false,
   });
+  const [duplicateWarning, setDuplicateWarning] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [editingVersionId, setEditingVersionId] = useState<number | null>(null);
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -107,6 +109,35 @@ export function SongDetail({
 
   const { data: allTags = [] } = useTags();
   const { data: searchTags = [] } = useTags(tagSearchQuery || undefined);
+
+  // 중복 곡 체크
+  useEffect(() => {
+    const checkDuplicate = async () => {
+      if (!formValues.title.trim()) {
+        setDuplicateWarning("");
+        return;
+      }
+
+      try {
+        const songs = await getSongInfoByName(formValues.title.trim());
+        // 수정 중일 때는 현재 곡은 제외하고 체크
+        const duplicates = songs.filter((s: any) =>
+          songId ? s.id !== songId : true
+        );
+
+        if (duplicates.length > 0) {
+          setDuplicateWarning("이미 존재하는 곡 제목입니다.");
+        } else {
+          setDuplicateWarning("");
+        }
+      } catch (error) {
+        console.error("Failed to check duplicate", error);
+      }
+    };
+
+    const timer = setTimeout(checkDuplicate, 500);
+    return () => clearTimeout(timer);
+  }, [formValues.title, songId]);
 
   const songLevels = useMemo(() => {
     return (song?.levels || []) as SongLevel[];
@@ -1200,14 +1231,21 @@ export function SongDetail({
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                name="title"
-                placeholder="제목"
-                value={formValues.title}
-                onChange={handleChange}
-                className="px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="title"
+                  placeholder="제목"
+                  value={formValues.title}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                />
+                {duplicateWarning && (
+                  <p className="absolute left-0 -bottom-5 text-red-500 text-xs ml-1">
+                    {duplicateWarning}
+                  </p>
+                )}
+              </div>
 
               <div className="relative">
                 <input

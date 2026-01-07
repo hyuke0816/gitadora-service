@@ -3,8 +3,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@shared/lib/prisma";
 
 // GET /api/songs -> 모든 노래 조회 (작곡가 정보 포함)
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const title = searchParams.get("title");
+  const version = searchParams.get("version");
+
+  const whereCondition: any = {};
+  if (title) {
+    whereCondition.title = { contains: title }; // 제목 부분 검색 지원
+  }
+  if (version) {
+    whereCondition.version = version; // 버전은 정확히 일치해야 함
+  }
+
   const posts = await prisma.tb_song_informations.findMany({
+    where: whereCondition,
     include: {
       artistInfo: {
         include: {

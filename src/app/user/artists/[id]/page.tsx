@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useParams, useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -14,8 +13,8 @@ import {
   SortingState,
   PaginationState,
 } from "@tanstack/react-table";
+import { useArtist } from "@entities/artists/api/artists.queries";
 import { useSongs } from "@entities/songs/api/songs.queries";
-import { versionsQueries } from "@entities/versions/api/versions.queries";
 
 interface Song {
   id: number;
@@ -50,15 +49,10 @@ const columnHelper = createColumnHelper<Song>();
 const getVersionShort = (version: string) => {
   if (!version) return "";
 
-  // 1. GALAXY WAVE -> GW
-  // ex) GITADORA GALAXY WAVE DELTA -> GW DELTA
   if (version.toUpperCase().includes("GALAXY WAVE")) {
     return version.replace(/GITADORA\s+GALAXY\s+WAVE/i, "GW");
   }
 
-  // 2. V series: GuitarFreaks V & DrumMania V -> V
-  // ex) GuitarFreaks V & DrumMania V -> V
-  // ex) GuitarFreaks V3 & DrumMania V3 -> V3
   if (version.match(/GuitarFreaks\s+(V\d*)\s+&\s+DrumMania\s+(V\d*)/i)) {
     const match = version.match(/GuitarFreaks\s+(V\d*)/i);
     if (match && match[1]) {
@@ -66,47 +60,61 @@ const getVersionShort = (version: string) => {
     }
   }
 
-  // 3. Classic (XG pre): GUITARFREAKS Xth & drummania Yth -> GF Xth & DM Yth
-  // ex) GUITARFREAKS 4thMIX & drummania 3rdMIX -> GF 4th & DM 3rd
-  // ex) GUITARFREAKS 2ndMIX & drummania 1stMIX -> GF 2nd & DM 1st
   if (version.match(/GUITARFREAKS\s+(.+?)MIX?\s+&\s+drummania\s+(.+?)MIX?/i)) {
     return version
       .replace(/GUITARFREAKS\s+/i, "GF")
       .replace(/drummania\s+/i, "DM")
-      .replace(/MIX/gi, ""); // Remove MIX to make it shorter
+      .replace(/MIX/gi, "");
   }
 
-  // Special Case for 1st
   if (version.match(/GUITARFREAKS\s+1st/i)) {
     return "GF1st";
   }
 
-  // 4. XG series
   if (version.match(/GuitarFreaksXG/i)) {
     return version
       .replace(/GuitarFreaksXG/i, "XG")
       .replace(/DrumManiaXG/i, "XG")
-      .replace(/\s+Groove to Live/i, "") // Remove subtitle for XG2
-      .replace(/&\s+XG/i, "&"); // Simplify
+      .replace(/\s+Groove to Live/i, "")
+      .replace(/&\s+XG/i, "&");
   }
 
-  // Default: Remove "GITADORA " prefix
   return version.replace(/^GITADORA\s+/, "");
 };
 
-export default function UserSongs() {
-  const { data, isLoading } = useSongs();
-  const { data: versions } = useQuery(versionsQueries.getAllVersions());
-  const searchParams = useSearchParams();
-  const initialQuery = searchParams.get("q") || "";
-  const songs: Song[] = (data as Song[]) || [];
-  const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
-  const [selectedVersion, setSelectedVersion] = useState<string>("");
+export default function ArtistDetail() {
+  const router = useRouter();
+  const params = useParams();
+  const artistId = Number(params.id);
+
+  const { data: artist, isLoading: isArtistLoading } = useArtist(artistId);
+  const { data: allSongs, isLoading: isSongsLoading } = useSongs();
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 20,
   });
+
+  const songs = useMemo(() => {
+    if (!allSongs || !artist) return [];
+    
+    const songsData = allSongs as Song[];
+    
+    // artistInfo.id로 매칭하거나, 이름으로 매칭
+    return songsData.filter((song) => {
+       // 1. artistInfo ID 매칭 (가장 정확)
+       if (song.artistInfo?.id === artistId) return true;
+       
+       // 2. 이름 매칭
+       if (song.artist === artist.name) return true;
+       
+       // 3. alias 매칭
+       if (artist.aliases && artist.aliases.some((a: any) => a.alias === song.artist)) return true;
+
+       return false;
+    });
+  }, [allSongs, artist, artistId]);
 
   const columns = useMemo(
     () => [
@@ -153,11 +161,11 @@ export default function UserSongs() {
         },
       }),
       columnHelper.accessor("artist", {
-        header: "작곡가",
+        header: "명의",
         enableSorting: true,
         cell: (info) => {
           const song = info.row.original;
-          const artistName = song.artistInfo?.name || info.getValue();
+          const artistName = info.getValue();
           return (
             <span className="block truncate" title={artistName}>
               {artistName}
@@ -171,19 +179,15 @@ export default function UserSongs() {
         cell: (info) => {
           const bpm = info.getValue();
           if (!bpm) return <span>-</span>;
-
-          // "min-max" 형식 파싱
           const bpmParts = bpm.split("-");
           if (bpmParts.length === 2) {
             const minBpm = bpmParts[0].trim();
             const maxBpm = bpmParts[1].trim();
-            // 최소와 최대가 같으면 하나만 표시
             if (minBpm === maxBpm) {
               return <span>{maxBpm}</span>;
             }
             return <span>{bpm}</span>;
           }
-          // BPM 변화가 없는 경우 (단일 값)
           return <span>{bpm}</span>;
         },
       }),
@@ -235,45 +239,8 @@ export default function UserSongs() {
     []
   );
 
-  // 검색어로 필터링된 노래 목록
-  const filteredSongs = useMemo(() => {
-    let result = songs;
-
-    if (selectedVersion) {
-      result = result.filter((song) => song.version === selectedVersion);
-    }
-
-    if (!searchQuery.trim()) {
-      return result;
-    }
-
-    const query = searchQuery.toLowerCase().trim();
-    return result.filter((song: Song) => {
-      // 곡명으로 검색
-      if (song.title.toLowerCase().includes(query)) {
-        return true;
-      }
-      // 작곡가명으로 검색
-      if (song.artist.toLowerCase().includes(query)) {
-        return true;
-      }
-      // 작곡가 정보의 이름으로 검색
-      if (song.artistInfo?.name?.toLowerCase().includes(query)) {
-        return true;
-      }
-      // 태그로 검색
-      if (song.tags && song.tags.length > 0) {
-        return song.tags.some(
-          (tagItem: { id: number; tag: { id: number; name: string } }) =>
-            tagItem.tag.name.toLowerCase().includes(query)
-        );
-      }
-      return false;
-    });
-  }, [songs, searchQuery, selectedVersion]);
-
   const table = useReactTable({
-    data: filteredSongs,
+    data: songs,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -299,7 +266,7 @@ export default function UserSongs() {
     totalRows
   );
 
-  if (isLoading) {
+  if (isArtistLoading || isSongsLoading) {
     return (
       <div className="max-w-6xl mx-auto py-6">
         <div className="text-center py-12 text-gray-600 dark:text-gray-400">
@@ -309,62 +276,79 @@ export default function UserSongs() {
     );
   }
 
+  if (!artist) {
+    return (
+      <div className="max-w-6xl mx-auto py-6">
+        <div className="text-center py-12 text-red-600 dark:text-red-400">
+          작곡가 정보를 찾을 수 없습니다.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto py-6">
-      {/* Table Card */}
-      <div className="w-full shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-4 md:p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700 gap-4">
-          <div className="flex items-center gap-3">
+        <div className="mb-4 px-4 sm:px-0 sm:mb-6 pt-4 sm:pt-0">
+            <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors"
+            >
+            <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+            </svg>
+            이전 페이지로 돌아가기
+            </button>
+        </div>
+
+      {/* Artist Info Card */}
+      <div className="shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-4 md:p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 mb-6">
+        <div className="flex items-center gap-3 mb-4">
             <div className="w-1 h-8 rounded-full bg-indigo-500"></div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              노래 리스트
+            {artist.name}
             </h2>
-          </div>
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-            <input
-              type="text"
-              placeholder="곡명, 작곡가, 태그로 검색..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setPagination({ pageIndex: 0, pageSize: pagination.pageSize });
-              }}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 w-full md:w-64"
-            />
-            <select
-              value={selectedVersion}
-              onChange={(e) => {
-                setSelectedVersion(e.target.value);
-                setPagination({ pageIndex: 0, pageSize: pagination.pageSize });
-              }}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-full md:w-48"
-            >
-              <option value="">전체 버전</option>
-              {versions
-                ?.slice()
-                .reverse()
-                .map((v: any) => (
-                  <option key={v.id} value={v.name}>
-                    {v.name}
-                  </option>
+        </div>
+        {artist.aliases && artist.aliases.length > 0 && (
+            <div className="flex flex-wrap gap-2 items-center text-sm">
+                <span className="text-gray-500 dark:text-gray-400 font-medium">다른 명의:</span>
+                {artist.aliases.map((alias: any) => (
+                    <span key={alias.id} className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
+                        {alias.alias}
+                    </span>
                 ))}
-            </select>
-            <div className="flex items-center justify-end md:justify-start">
-              <select
-                value={table.getState().pagination.pageSize}
-                onChange={(e) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-full md:w-auto"
-              >
-                {[10, 20, 30, 50, 100].map((size) => (
-                  <option key={size} value={size}>
-                    {size}개씩 보기
-                  </option>
-                ))}
-              </select>
             </div>
-          </div>
+        )}
+      </div>
+
+      {/* Songs Table Card */}
+      <div className="w-full shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-4 md:p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            곡 목록 ({songs.length})
+          </h3>
+          <select
+              value={table.getState().pagination.pageSize}
+              onChange={(e) => {
+                table.setPageSize(Number(e.target.value));
+              }}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            >
+              {[10, 20, 30, 50, 100].map((size) => (
+                <option key={size} value={size}>
+                  {size}개씩 보기
+                </option>
+              ))}
+            </select>
         </div>
 
         {/* Desktop Table View */}
@@ -425,9 +409,7 @@ export default function UserSongs() {
                     colSpan={6}
                     className="px-4 py-8 text-center text-gray-500 dark:text-gray-400"
                   >
-                    {searchQuery.trim()
-                      ? "검색 결과가 없습니다"
-                      : "노래 데이터가 없습니다"}
+                    곡 데이터가 없습니다.
                   </td>
                 </tr>
               ) : (
@@ -464,9 +446,7 @@ export default function UserSongs() {
         <div className="lg:hidden space-y-4">
           {table.getRowModel().rows.length === 0 ? (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-              {searchQuery.trim()
-                ? "검색 결과가 없습니다"
-                : "노래 데이터가 없습니다"}
+              곡 데이터가 없습니다.
             </div>
           ) : (
             table.getRowModel().rows.map((row) => {
@@ -513,9 +493,9 @@ export default function UserSongs() {
                           </Link>
                           <div
                             className="text-sm text-gray-600 dark:text-gray-300 mt-1 break-words w-full"
-                            title={song.artistInfo?.name || song.artist}
+                            title={song.artist}
                           >
-                            {song.artistInfo?.name || song.artist}
+                            {song.artist}
                           </div>
                         </div>
                       </div>

@@ -15,6 +15,7 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { useSongs } from "@entities/songs/api/songs.queries";
+import { getSongInfoByName } from "@entities/songs/api/songs.service";
 import {
   useCreateSong,
   useUpdateSong,
@@ -198,6 +199,7 @@ export default function Songs() {
   const [tagSearchQuery, setTagSearchQuery] = useState<string>("");
   const [showTagDropdown, setShowTagDropdown] = useState<boolean>(false);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [duplicateWarning, setDuplicateWarning] = useState<string>("");
   const { data: allTags = [] } = useTags(); // 모든 태그 로드
   const { data: searchTags = [] } = useTags(tagSearchQuery || undefined); // 검색 태그
 
@@ -231,6 +233,35 @@ export default function Songs() {
   const { mutateAsync: deleteSong } = useDeleteSong();
   const { mutateAsync: createArtist } = useCreateArtists();
   const { mutateAsync: createTag } = useCreateTag();
+
+  // 중복 곡 체크
+  useEffect(() => {
+    const checkDuplicate = async () => {
+      if (!formValues.title.trim()) {
+        setDuplicateWarning("");
+        return;
+      }
+
+      try {
+        const songs = await getSongInfoByName(formValues.title.trim());
+        // 수정 중일 때는 현재 곡은 제외하고 체크
+        const duplicates = songs.filter((s: any) =>
+          editingId ? s.id !== editingId : true
+        );
+
+        if (duplicates.length > 0) {
+          setDuplicateWarning("이미 존재하는 곡 제목입니다.");
+        } else {
+          setDuplicateWarning("");
+        }
+      } catch (error) {
+        console.error("Failed to check duplicate", error);
+      }
+    };
+
+    const timer = setTimeout(checkDuplicate, 500);
+    return () => clearTimeout(timer);
+  }, [formValues.title, editingId]);
 
   // 버전 목록이 로드되거나 폼이 열릴 때 최신 버전을 기본값으로 설정
   useEffect(() => {
@@ -932,15 +963,22 @@ export default function Songs() {
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    name="title"
-                    placeholder="제목"
-                    value={formValues.title}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                  />
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      name="title"
+                      placeholder="제목"
+                      value={formValues.title}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+                    />
+                    {duplicateWarning && (
+                      <p className="absolute left-0 -bottom-5 text-red-500 text-xs ml-1">
+                        {duplicateWarning}
+                      </p>
+                    )}
+                  </div>
                   <select
                     name="titleIndex"
                     value={formValues.titleIndex}

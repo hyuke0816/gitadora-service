@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useRef } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { SkillPageSkeleton } from "@/components/Skeleton";
 import { getSkillColorStyle } from "@/shared/utils/skill.utils";
-import { InstrumentTypeSelector } from "@/shared/components/InstrumentTypeSelector";
+import { instrumentLabels } from "@/shared/components/InstrumentTypeSelector";
 import { useUserSkill } from "@/entities/users/api/users.queries";
 
 // 달성률에 따른 등급 표시
@@ -41,7 +41,12 @@ const difficultyColors: Record<string, string> = {
 export default function SkillPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const userId = parseInt(params.id as string);
+
+  const instrumentType =
+    (searchParams.get("instrumentType") as "GUITAR" | "DRUM") || "GUITAR";
+  const versionParam = searchParams.get("version");
 
   // 곡 클릭 핸들러
   const handleSongClick = (songId?: number) => {
@@ -51,52 +56,6 @@ export default function SkillPage() {
       alert("해당 곡의 상세 정보를 찾을 수 없습니다.");
     }
   };
-
-  // URL 쿼리 파라미터에서 버전 정보 가져오기
-  const [versionParam, setVersionParam] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      return params.get("version");
-    }
-    return null;
-  });
-
-  // 초기 instrumentType을 URL 파라미터에서 읽기
-  const [instrumentType, setInstrumentType] = useState<"GUITAR" | "DRUM">(
-    () => {
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        const instrumentType = params.get("instrumentType");
-        if (instrumentType === "GUITAR" || instrumentType === "DRUM") {
-          return instrumentType;
-        }
-      }
-      return "GUITAR";
-    }
-  );
-
-  // URL 변경 감지 (브라우저 뒤로가기/앞으로가기 등)
-  useEffect(() => {
-    const handleLocationChange = () => {
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        const version = params.get("version");
-        const instrumentType = params.get("instrumentType") as
-          | "GUITAR"
-          | "DRUM"
-          | null;
-        setVersionParam(version);
-        if (instrumentType === "GUITAR" || instrumentType === "DRUM") {
-          setInstrumentType(instrumentType);
-        }
-      }
-    };
-
-    window.addEventListener("popstate", handleLocationChange);
-    return () => {
-      window.removeEventListener("popstate", handleLocationChange);
-    };
-  }, []);
   const [selectedHistoryId, setSelectedHistoryId] = useState<number | null>(
     null
   ); // 선택된 히스토리 ID
@@ -173,39 +132,27 @@ export default function SkillPage() {
 
   return (
     <div className="max-w-6xl mx-auto pb-6">
-      {/* 헤더 부분 삭제됨 */}
-      {/* 악기 타입 선택 */}
-      <div className="mb-6 px-4 md:px-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="mb-2">
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm">
-              {skillData.user?.title || "No Title"}
-            </span>
-          </div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-            {skillData.user?.ingamename || "Unknown User"}
-            <span className="font-medium text-lg ml-2 text-gray-500 dark:text-gray-400">
-              님의 스킬정보
-            </span>
-          </h1>
+      {/* 유저 정보 헤더 */}
+      <div className="mb-2 px-4 md:px-0 pt-4">
+        <div className="mb-2">
+          <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-sm">
+            {skillData.user?.title || "No Title"}
+          </span>
         </div>
-        <InstrumentTypeSelector
-          instrumentType={instrumentType}
-          onInstrumentTypeChange={(type) => {
-            setInstrumentType(type);
-            setSelectedHistoryId(null); // 악기 타입 변경 시 히스토리 선택 초기화
-            setIsHotTableOpen(true); // 악기 타입 변경 시 테이블 접힘 상태 초기화
-            setIsOtherTableOpen(true);
-          }}
-        />
+        <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          {skillData.user?.ingamename || "Unknown User"}
+          <span className="font-medium text-lg ml-2 text-gray-500 dark:text-gray-400">
+            님의 스킬정보
+          </span>
+        </h1>
       </div>
 
       {/* 스킬 요약 카드 */}
       {skillData.totalSkill > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 px-4 md:px-0">
+        <div className="flex gap-2 mb-6 px-4 md:px-0 md:grid md:grid-cols-3">
           {/* 총 스킬 */}
           <div
-            className={`shadow-lg rounded-lg p-4 text-white cursor-pointer transition-transform hover:scale-105 ${
+            className={`flex-1 shadow-lg rounded-lg p-2 md:p-4 text-white cursor-pointer transition-transform hover:scale-105 ${
               skillData.totalSkill < 1000 ? "text-gray-900" : ""
             } ${getSkillColorStyle(skillData.totalSkill).className || ""}`}
             style={{
@@ -215,9 +162,11 @@ export default function SkillPage() {
             }}
             onClick={handleTotalClick}
           >
-            <div className="flex justify-between items-center md:block">
-              <div className="text-xs font-medium opacity-90 mb-1">TOTAL</div>
-              <div className="text-2xl md:text-3xl font-bold">
+            <div className="flex flex-col md:block items-center md:items-start">
+              <div className="text-[10px] md:text-xs font-medium opacity-90 mb-0.5">
+                TOTAL
+              </div>
+              <div className="text-base sm:text-lg md:text-3xl font-bold truncate w-full text-center md:text-left">
                 {skillData.totalSkill.toFixed(2)}
               </div>
             </div>
@@ -225,12 +174,14 @@ export default function SkillPage() {
 
           {/* HOT 스킬 */}
           <div
-            className="bg-[#ff69a0] shadow-lg rounded-lg p-4 text-white cursor-pointer transition-transform hover:scale-105"
+            className="flex-1 bg-[#ff69a0] shadow-lg rounded-lg p-2 md:p-4 text-white cursor-pointer transition-transform hover:scale-105"
             onClick={handleHotClick}
           >
-            <div className="flex justify-between items-center md:block">
-              <div className="text-xs font-medium opacity-90 mb-1">HOT</div>
-              <div className="text-2xl md:text-3xl font-bold">
+            <div className="flex flex-col md:block items-center md:items-start">
+              <div className="text-[10px] md:text-xs font-medium opacity-90 mb-0.5">
+                HOT
+              </div>
+              <div className="text-base sm:text-lg md:text-3xl font-bold truncate w-full text-center md:text-left">
                 {skillData.hotSkill.toFixed(2)}
               </div>
             </div>
@@ -238,12 +189,14 @@ export default function SkillPage() {
 
           {/* OTHER 스킬 */}
           <div
-            className="bg-[#707bdd] shadow-lg rounded-lg p-4 text-white cursor-pointer transition-transform hover:scale-105"
+            className="flex-1 bg-[#707bdd] shadow-lg rounded-lg p-2 md:p-4 text-white cursor-pointer transition-transform hover:scale-105"
             onClick={handleOtherClick}
           >
-            <div className="flex justify-between items-center md:block">
-              <div className="text-xs font-medium opacity-90 mb-1">OTHER</div>
-              <div className="text-2xl md:text-3xl font-bold">
+            <div className="flex flex-col md:block items-center md:items-start">
+              <div className="text-[10px] md:text-xs font-medium opacity-90 mb-0.5">
+                OTHER
+              </div>
+              <div className="text-base sm:text-lg md:text-3xl font-bold truncate w-full text-center md:text-left">
                 {skillData.otherSkill.toFixed(2)}
               </div>
             </div>

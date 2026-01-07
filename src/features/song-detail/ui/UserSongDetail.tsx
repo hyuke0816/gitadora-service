@@ -16,6 +16,22 @@ import { versionsQueries } from "@entities/versions/api/versions.queries";
 import { apiClient } from "@shared/api/instances";
 import { useCreateSongLevel } from "@entities/songs/api/songs.mutaions";
 
+interface Version {
+  id: number;
+  name: string;
+  startedAt: string;
+}
+
+interface Tag {
+  id: number;
+  name: string;
+  color: string | null;
+}
+
+interface SongTag {
+  tag: Tag;
+}
+
 interface SkillDistribution {
   distribution: Record<
     string,
@@ -58,9 +74,14 @@ interface SongLevel {
   };
 }
 
+interface TableRow {
+  version: Version;
+  versionId: number;
+  [key: string]: SongLevel | Version | number | null | undefined;
+}
+
 interface UserSongDetailProps {
   songId: number;
-  backPath?: string;
 }
 
 const difficultyColors: Record<string, string> = {
@@ -86,16 +107,13 @@ const instrumentLabels: Record<string, string> = {
   OPEN: "OPEN",
 };
 
-export function UserSongDetail({
-  songId,
-  backPath = "/user/songs",
-}: UserSongDetailProps) {
+export function UserSongDetail({ songId }: UserSongDetailProps) {
   const router = useRouter();
   const { data: song, isLoading } = useSong(songId);
   const { data: auth } = useAuthMe();
   const { data: versions = [] } = useQuery(
     versionsQueries.getAllVersions()
-  ) as { data: any[] };
+  ) as { data: Version[] };
   const createSongLevel = useCreateSongLevel(songId);
   const hasInitializedLevels = useRef(false);
   const [distribution, setDistribution] = useState<SkillDistribution | null>(
@@ -106,6 +124,11 @@ export function UserSongDetail({
   const [isLoadingDistribution, setIsLoadingDistribution] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  // 페이지 진입 시 스크롤 최상단으로 이동
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   // 레벨 정보 처리
   const songLevels = useMemo(() => {
@@ -124,9 +147,7 @@ export function UserSongDetail({
     }
 
     // 곡이 수록된 버전 찾기
-    const songVersion = versions.find(
-      (v: any) => v.name === song.version
-    ) as any;
+    const songVersion = versions.find((v) => v.name === song.version);
 
     if (!songVersion) {
       return;
@@ -134,7 +155,7 @@ export function UserSongDetail({
 
     // 해당 버전부터 현재까지의 모든 버전 찾기 (startedAt 기준)
     const songVersionStartedAt = new Date(songVersion.startedAt).getTime();
-    const targetVersions = versions.filter((v: any) => {
+    const targetVersions = versions.filter((v) => {
       const vStartedAt = new Date(v.startedAt).getTime();
       return vStartedAt >= songVersionStartedAt;
     });
@@ -160,7 +181,7 @@ export function UserSongDetail({
                 difficulty: difficulty,
                 level: 0,
               });
-            } catch (error) {
+            } catch {
               // 이미 존재하는 레벨이면 무시
               console.log(
                 `Level already exists: ${version.name} - ${instrument} - ${difficulty}`
@@ -198,18 +219,18 @@ export function UserSongDetail({
   const versionList = useMemo(() => {
     const versionIds = new Set(songLevels.map((level) => level.versionId));
     return versions
-      .filter((v: any) => versionIds.has(v.id))
+      .filter((v) => versionIds.has(v.id))
       .sort(
-        (a: any, b: any) =>
+        (a, b) =>
           new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()
       );
   }, [songLevels, versions]);
 
   // 테이블 데이터 준비
-  const tableData = useMemo(() => {
-    return versionList.map((version: any) => {
+  const tableData = useMemo<TableRow[]>(() => {
+    return versionList.map((version) => {
       const versionLevels = groupedLevels[version.id] || {};
-      const rowData: any = {
+      const rowData: TableRow = {
         version,
         versionId: version.id,
       };
@@ -227,11 +248,11 @@ export function UserSongDetail({
   }, [versionList, groupedLevels]);
 
   // 컬럼 헬퍼
-  const columnHelper = createColumnHelper<(typeof tableData)[0]>();
+  const columnHelper = createColumnHelper<TableRow>();
 
   // 컬럼 정의
   const columns = useMemo(() => {
-    const cols: any[] = [
+    const cols = [
       columnHelper.accessor("version", {
         header: "버전",
         cell: (info) => (
@@ -251,7 +272,7 @@ export function UserSongDetail({
           columnHelper.accessor(`${instrument}_${difficulty}`, {
             header: difficulty,
             cell: (info) => {
-              const level = info.getValue();
+              const level = info.getValue() as unknown as SongLevel | null;
               return (
                 <div
                   className={`px-2 py-2 text-center ${
@@ -260,7 +281,7 @@ export function UserSongDetail({
                       : "text-gray-400 dark:text-gray-500"
                   }`}
                 >
-                  {level && level.level > 0 ? level.level : "-"}
+                  {level && level.level > 0 ? level.level.toFixed(2) : "-"}
                 </div>
               );
             },
@@ -275,7 +296,7 @@ export function UserSongDetail({
   }, [columnHelper]);
 
   // react-table 인스턴스
-  const table = useReactTable({
+  const table = useReactTable<TableRow>({
     data: tableData,
     columns,
     getCoreRowModel: getCoreRowModel(),
@@ -357,7 +378,7 @@ export function UserSongDetail({
 
   if (isLoading) {
     return (
-      <main className="p-8 max-w-6xl mx-auto">
+      <main className="py-8 px-4 sm:px-8 max-w-6xl mx-auto">
         <div className="text-center text-gray-900 dark:text-gray-100">
           로딩 중...
         </div>
@@ -367,7 +388,7 @@ export function UserSongDetail({
 
   if (!song) {
     return (
-      <main className="p-8 max-w-6xl mx-auto">
+      <main className="py-8 px-4 sm:px-8 max-w-6xl mx-auto">
         <div className="text-center text-red-600 dark:text-red-400">
           곡 정보를 찾을 수 없습니다.
         </div>
@@ -376,22 +397,28 @@ export function UserSongDetail({
   }
 
   return (
-    <main className="p-8 max-w-6xl mx-auto">
+    <main className="pt-0 pb-8 px-0 sm:py-8 sm:px-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2 text-gray-900 dark:text-gray-100">
-            {song.title}
-          </h1>
-          {backPath && (
-            <button
-              onClick={() => router.push(backPath)}
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
-            >
-              ← 목록으로 돌아가기
-            </button>
-          )}
-        </div>
+      <div className="mb-4 px-4 sm:px-0 sm:mb-6 pt-4 sm:pt-0">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium transition-colors"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+          이전 페이지로 돌아가기
+        </button>
       </div>
 
       {/* Song Info Card */}
@@ -409,7 +436,7 @@ export function UserSongDetail({
           <div className="flex flex-col gap-6">
             {/* 앨범 커버 이미지 */}
             {song.imageUrl && (
-              <div className="w-full aspect-square md:w-64 md:h-64 rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700 mx-auto md:mx-0">
+              <div className="w-48 h-48 sm:w-64 sm:h-64 rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-gray-700 mx-auto md:mx-0 shrink-0">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={song.imageUrl}
@@ -503,7 +530,7 @@ export function UserSongDetail({
                     태그
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {song.tags.map((songTag: any) => {
+                    {song.tags.map((songTag: SongTag) => {
                       const tag = songTag.tag;
                       const tagColor = tag.color || "#3b82f6";
                       return (
@@ -656,77 +683,133 @@ export function UserSongDetail({
             등록된 레벨 정보가 없습니다.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                {/* 첫 번째 헤더 행: 악기 그룹 */}
-                <tr className="border-b bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                  <th
-                    rowSpan={2}
-                    className="px-4 py-3 text-left font-medium border-r border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
-                  >
-                    버전
-                  </th>
-                  {["DRUM", "GUITAR", "BASS"].map((instrument) => (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full border-collapse text-sm whitespace-nowrap">
+                <thead>
+                  {/* 첫 번째 헤더 행: 악기 그룹 */}
+                  <tr className="border-b bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
                     <th
-                      key={instrument}
-                      colSpan={4}
-                      className="px-2 py-2 text-center font-medium border-r border-gray-300 dark:border-gray-600"
+                      rowSpan={2}
+                      className="px-4 py-3 text-left font-medium border-r border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 whitespace-nowrap"
                     >
-                      {instrumentLabels[instrument] || instrument}
+                      버전
                     </th>
-                  ))}
-                </tr>
-                {/* 두 번째 헤더 행: 난이도 */}
-                <tr className="border-b bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                  {["DRUM", "GUITAR", "BASS"].map((instrument) =>
-                    ["BASIC", "ADVANCED", "EXTREME", "MASTER"].map(
-                      (difficulty) => (
-                        <th
-                          key={`${instrument}-${difficulty}`}
-                          className="px-2 py-2 text-center font-medium text-xs border-r border-gray-300 dark:border-gray-600 last:border-r-0"
-                        >
-                          {difficultyLabels[difficulty] || difficulty}
-                        </th>
-                      )
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row, rowIdx) => {
-                  const isEven = rowIdx % 2 === 0;
-                  return (
-                    <tr
-                      key={row.id}
-                      className={`border-b border-gray-200 dark:border-gray-700 ${
-                        isEven
-                          ? "bg-white dark:bg-gray-800"
-                          : "bg-gray-50 dark:bg-gray-800/50"
-                      } hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors`}
-                    >
-                      {row.getVisibleCells().map((cell, cellIdx) => {
-                        const isFirstCell = cellIdx === 0;
-                        return (
-                          <td
-                            key={cell.id}
-                            className={`border-r border-gray-300 dark:border-gray-700 ${
-                              isFirstCell ? "border-l px-4 py-2" : ""
-                            }`}
+                    {["DRUM", "GUITAR", "BASS"].map((instrument) => (
+                      <th
+                        key={instrument}
+                        colSpan={4}
+                        className="px-2 py-2 text-center font-medium border-r border-gray-300 dark:border-gray-600 whitespace-nowrap"
+                      >
+                        {instrumentLabels[instrument] || instrument}
+                      </th>
+                    ))}
+                  </tr>
+                  {/* 두 번째 헤더 행: 난이도 */}
+                  <tr className="border-b bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    {["DRUM", "GUITAR", "BASS"].map((instrument) =>
+                      ["BASIC", "ADVANCED", "EXTREME", "MASTER"].map(
+                        (difficulty) => (
+                          <th
+                            key={`${instrument}-${difficulty}`}
+                            className="px-2 py-2 text-center font-medium text-xs border-r border-gray-300 dark:border-gray-600 last:border-r-0 whitespace-nowrap"
                           >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            {difficultyLabels[difficulty] || difficulty}
+                          </th>
+                        )
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row, rowIdx) => {
+                    const isEven = rowIdx % 2 === 0;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`border-b border-gray-200 dark:border-gray-700 ${
+                          isEven
+                            ? "bg-white dark:bg-gray-800"
+                            : "bg-gray-50 dark:bg-gray-800/50"
+                        } hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors`}
+                      >
+                        {row.getVisibleCells().map((cell, cellIdx) => {
+                          const isFirstCell = cellIdx === 0;
+                          return (
+                            <td
+                              key={cell.id}
+                              className={`border-r border-gray-300 dark:border-gray-700 ${
+                                isFirstCell ? "border-l px-4 py-2" : ""
+                              }`}
+                            >
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile List View */}
+            <div className="md:hidden space-y-4">
+              {tableData.map((row) => (
+                <div
+                  key={row.versionId}
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
+                >
+                  <div className="font-bold text-lg mb-3 pb-2 border-b border-gray-100 dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    {row.version.name}
+                  </div>
+
+                  <div className="space-y-4">
+                    {["DRUM", "GUITAR", "BASS"].map((instrument) => (
+                      <div key={instrument}>
+                        <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">
+                          {instrumentLabels[instrument] || instrument}
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                          {["BASIC", "ADVANCED", "EXTREME", "MASTER"].map(
+                            (difficulty) => {
+                              const cellKey = `${instrument}_${difficulty}`;
+                              const levelData = row[
+                                cellKey
+                              ] as unknown as SongLevel | null;
+
+                              return (
+                                <div key={difficulty} className="text-center">
+                                  <div className="text-[10px] text-gray-400 mb-1">
+                                    {difficultyLabels[difficulty]}
+                                  </div>
+                                  <div
+                                    className={`py-1 rounded text-sm font-medium ${
+                                      levelData && levelData.level > 0
+                                        ? difficultyColors[difficulty] || ""
+                                        : "bg-gray-50 dark:bg-gray-700/50 text-gray-300 dark:text-gray-600"
+                                    }`}
+                                  >
+                                    {levelData && levelData.level > 0
+                                      ? levelData.level.toFixed(2)
+                                      : "-"}
+                                  </div>
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

@@ -18,6 +18,7 @@ export interface SkillRecord {
   skillScore: number;
   isHot: boolean;
   playedAt: string;
+  songId?: number; // 곡 ID (상세 페이지 이동용)
 }
 
 export interface SkillHistory {

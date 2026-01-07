@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { SkillPageSkeleton } from "@/components/Skeleton";
 import { getSkillColorStyle } from "@/shared/utils/skill.utils";
@@ -40,7 +40,17 @@ const difficultyColors: Record<string, string> = {
 
 export default function SkillPage() {
   const params = useParams();
+  const router = useRouter();
   const userId = parseInt(params.id as string);
+
+  // 곡 클릭 핸들러
+  const handleSongClick = (songId?: number) => {
+    if (songId) {
+      router.push(`/user/songs/${songId}`);
+    } else {
+      alert("해당 곡의 상세 정보를 찾을 수 없습니다.");
+    }
+  };
 
   // URL 쿼리 파라미터에서 버전 정보 가져오기
   const [versionParam, setVersionParam] = useState<string | null>(() => {
@@ -328,7 +338,8 @@ export default function SkillPage() {
                     skillData.hotRecords.map((record, idx) => (
                       <tr
                         key={record.id}
-                        className="border-b border-gray-200 dark:border-gray-700 transition-all duration-200 hover:bg-[#ff69a0]/10 dark:hover:bg-[#ff69a0]/10 bg-white dark:bg-gray-800"
+                        onClick={() => handleSongClick(record.songId)}
+                        className="border-b border-gray-200 dark:border-gray-700 transition-all duration-200 hover:bg-[#ff69a0]/10 dark:hover:bg-[#ff69a0]/10 bg-white dark:bg-gray-800 cursor-pointer"
                       >
                         <td className="hidden sm:table-cell px-4 py-4 text-gray-700 dark:text-gray-300 font-medium">
                           {idx + 1}
@@ -371,7 +382,8 @@ export default function SkillPage() {
                 skillData.hotRecords.map((record, idx) => (
                   <div
                     key={record.id}
-                    className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden"
+                    onClick={() => handleSongClick(record.songId)}
+                    className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
                   >
                     <div
                       className={`absolute top-0 left-0 w-1 h-full ${
@@ -523,7 +535,8 @@ export default function SkillPage() {
                     skillData.otherRecords.map((record, idx) => (
                       <tr
                         key={record.id}
-                        className="border-b border-gray-200 dark:border-gray-700 transition-all duration-200 hover:bg-[#707bdd]/10 dark:hover:bg-[#707bdd]/10 bg-white dark:bg-gray-800"
+                        onClick={() => handleSongClick(record.songId)}
+                        className="border-b border-gray-200 dark:border-gray-700 transition-all duration-200 hover:bg-[#707bdd]/10 dark:hover:bg-[#707bdd]/10 bg-white dark:bg-gray-800 cursor-pointer"
                       >
                         <td className="hidden sm:table-cell px-4 py-4 text-gray-700 dark:text-gray-300 font-medium">
                           {idx + 1}
@@ -566,7 +579,8 @@ export default function SkillPage() {
                 skillData.otherRecords.map((record, idx) => (
                   <div
                     key={record.id}
-                    className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden"
+                    onClick={() => handleSongClick(record.songId)}
+                    className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden cursor-pointer active:scale-[0.98] transition-transform"
                   >
                     <div
                       className={`absolute top-0 left-0 w-1 h-full ${

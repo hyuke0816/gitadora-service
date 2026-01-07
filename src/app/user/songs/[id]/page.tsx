@@ -7,5 +7,5 @@ export default function UserSongDetailPage() {
   const params = useParams();
   const songId = parseInt(params.id as string);
 
-  return <UserSongDetail songId={songId} backPath="/user/songs" />;
+  return <UserSongDetail songId={songId} />;
 }

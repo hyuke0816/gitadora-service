@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@shared/lib/prisma";
+import { InstrumentType, Prisma } from "@prisma/client";
 
 // GET /api/users/[id]/skill?instrumentType=DRUM
 export async function GET(
@@ -10,7 +11,8 @@ export async function GET(
     const { id } = await params;
     const userId = parseInt(id);
     const { searchParams } = new URL(request.url);
-    const instrumentType = searchParams.get("instrumentType") || "DRUM";
+    const instrumentType = (searchParams.get("instrumentType") ||
+      "DRUM") as InstrumentType;
     const historyId = searchParams.get("historyId"); // 히스토리 ID
     const version = searchParams.get("version"); // 버전 필터
 
@@ -44,9 +46,9 @@ export async function GET(
     }
 
     // 날짜 필터 조건 구성
-    const whereClause: any = {
+    const whereClause: Prisma.tb_user_skill_recordsWhereInput = {
       userId,
-      instrumentType: instrumentType as any,
+      instrumentType,
     };
 
     // 버전 필터 추가
@@ -81,6 +83,30 @@ export async function GET(
     // 최신 기록만 추출
     const latestRecords = Array.from(latestRecordsMap.values());
 
+    // 곡 제목 목록 추출
+    const songTitles = latestRecords.map((r) => r.songTitle);
+
+    // 곡 정보 조회 (ID 매핑용)
+    const songs = await prisma.tb_song_informations.findMany({
+      where: {
+        title: {
+          in: songTitles,
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+      },
+    });
+
+    // 곡 제목 -> ID 맵 생성
+    const songIdMap = new Map<string, number>();
+    songs.forEach((song) => {
+      // 동일 제목이 있을 경우 ID가 덮어씌워질 수 있음 (최신 ID로)
+      // 정확한 매칭을 위해서는 스킬 레코드에 songId가 있어야 하지만 현재 구조상 제목 매칭이 최선
+      songIdMap.set(song.title, song.id);
+    });
+
     // 저장된 데이터 그대로 반환 (곡 정보 조인 없이)
     const records = latestRecords.map((record) => ({
       id: record.id,
@@ -91,6 +117,7 @@ export async function GET(
       skillScore: record.skillScore,
       isHot: record.isHot,
       playedAt: record.playedAt.toISOString(),
+      songId: songIdMap.get(record.songTitle), // 매핑된 곡 ID 추가
     }));
 
     // HOT/OTHER 구분하여 정렬
@@ -118,7 +145,7 @@ export async function GET(
     const historyRecords = await prisma.tb_user_skill_history.findMany({
       where: {
         userId,
-        instrumentType: instrumentType as any,
+        instrumentType,
       },
       orderBy: {
         recordedAt: "desc",
@@ -145,10 +172,13 @@ export async function GET(
       history,
       user: userInfo,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching skill data:", error);
     return NextResponse.json(
-      { message: error.message || "Failed to fetch skill data" },
+      {
+        message:
+          error instanceof Error ? error.message : "Failed to fetch skill data",
+      },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { SkillPageSkeleton } from "@/components/Skeleton";
@@ -38,7 +38,7 @@ const difficultyColors: Record<string, string> = {
     "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300",
 };
 
-export default function SkillPage() {
+function SkillContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -688,5 +688,13 @@ export default function SkillPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SkillPage() {
+  return (
+    <Suspense fallback={<SkillPageSkeleton />}>
+      <SkillContent />
+    </Suspense>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -14,8 +14,8 @@ import {
   SortingState,
   PaginationState,
 } from "@tanstack/react-table";
-import { useSongs } from "@entities/songs/api/songs.queries";
-import { versionsQueries } from "@entities/versions/api/versions.queries";
+import { useSongs } from "@/entities/songs/api/songs.queries";
+import { versionsQueries } from "@/entities/versions/api/versions.queries";
 
 interface Song {
   id: number;
@@ -94,7 +94,7 @@ const getVersionShort = (version: string) => {
   return version.replace(/^GITADORA\s+/, "");
 };
 
-export default function UserSongs() {
+function UserSongsContent() {
   const { data, isLoading } = useSongs();
   const { data: versions } = useQuery(versionsQueries.getAllVersions());
   const searchParams = useSearchParams();
@@ -626,3 +626,18 @@ export default function UserSongs() {
   );
 }
 
+export default function UserSongs() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-6xl mx-auto py-6">
+          <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+            로딩 중...
+          </div>
+        </div>
+      }
+    >
+      <UserSongsContent />
+    </Suspense>
+  );
+}

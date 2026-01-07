@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -23,7 +23,7 @@ import {
 
 const columnHelper = createColumnHelper<UserList>();
 
-export default function UserListPage() {
+function UserListContent() {
   const searchParams = useSearchParams();
   const instrumentType =
     (searchParams.get("instrumentType") as "GUITAR" | "DRUM") || "GUITAR";
@@ -368,5 +368,13 @@ export default function UserListPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UserListPage() {
+  return (
+    <Suspense fallback={<SkillRankSkeleton />}>
+      <UserListContent />
+    </Suspense>
   );
 }

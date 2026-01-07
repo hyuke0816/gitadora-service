@@ -91,7 +91,7 @@ export default function UserListPage() {
               className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
             >
               {user.title && (
-                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">
+                <span className="hidden md:inline-block px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-medium">
                   {user.title}
                 </span>
               )}
@@ -188,34 +188,26 @@ export default function UserListPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto py-6">
-      {/* 헤더 */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-          유저 목록
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 text-sm">
-          전체 사용자 목록과 스킬 정보를 확인할 수 있습니다
-        </p>
+    <div className="max-w-6xl mx-auto pb-6">
+      {/* 악기 타입 선택 */}
+      <div className="mb-6 px-4 md:px-0">
+        <InstrumentTypeSelector
+          instrumentType={instrumentType}
+          onInstrumentTypeChange={handleInstrumentTypeChange}
+        />
       </div>
 
-      {/* 악기 타입 선택 */}
-      <InstrumentTypeSelector
-        instrumentType={instrumentType}
-        onInstrumentTypeChange={handleInstrumentTypeChange}
-      />
-
       {/* 유저 목록 테이블 */}
-      <div className="shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-4 md:p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="w-1 h-8 rounded-full bg-indigo-500"></div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {instrumentLabels[instrumentType]} 유저 목록
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100">
+              유저 리스트
             </h2>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
             <input
               type="text"
               placeholder="유저명으로 검색..."
@@ -227,24 +219,23 @@ export default function UserListPage() {
                   pageSize: pagination.pageSize,
                 });
               }}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              페이지당 항목 수:
-            </span>
-            <select
-              value={pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-            >
-              {[10, 20, 30, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center justify-end md:justify-start">
+              <select
+                value={pagination.pageSize}
+                onChange={(e) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-full md:w-auto"
+              >
+                {[10, 20, 30, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}개씩 보기
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -259,12 +250,14 @@ export default function UserListPage() {
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className={`px-4 py-4 text-left font-bold text-gray-800 dark:text-gray-200 uppercase text-xs tracking-wider ${
+                      className={`px-4 py-4 font-bold text-gray-800 dark:text-gray-200 uppercase text-xs tracking-wider ${
+                        header.id === "ingamename" ? "text-left" : "text-center"
+                      } ${
                         header.id === "rank"
-                          ? "w-[10%]"
+                          ? "w-[20%]"
                           : header.id === "ingamename"
-                          ? "w-[70%]"
-                          : "w-[20%]"
+                          ? "w-[45%]"
+                          : "w-[35%]"
                       }`}
                     >
                       {header.isPlaceholder ? null : (
@@ -320,7 +313,7 @@ export default function UserListPage() {
                           : "bg-gray-50 dark:bg-gray-800/50"
                       }`}
                     >
-                      <td className="px-4 py-4 text-gray-700 dark:text-gray-300 font-medium w-[10%]">
+                      <td className="px-4 py-4 text-gray-700 dark:text-gray-300 font-medium w-[20%] text-center">
                         {rank}
                       </td>
                       {row
@@ -331,8 +324,8 @@ export default function UserListPage() {
                             key={cell.id}
                             className={`px-4 py-4 text-gray-800 dark:text-gray-200 font-medium overflow-hidden ${
                               cell.column.id === "ingamename"
-                                ? "w-[70%]"
-                                : "w-[20%]"
+                                ? "w-[45%] text-left"
+                                : "w-[35%] text-center"
                             }`}
                           >
                             {flexRender(
@@ -350,41 +343,41 @@ export default function UserListPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
+        <div className="flex flex-col md:flex-row items-center justify-between mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700 gap-4">
+          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg w-full md:w-auto text-center">
             {totalRows > 0
               ? `${startRow}-${endRow} / 총 ${totalRows}개`
               : "데이터가 없습니다"}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2">
             <button
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               처음
             </button>
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               이전
             </button>
-            <span className="px-4 py-2 text-sm font-bold text-gray-800 dark:text-gray-200 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+            <span className="px-2 md:px-4 py-2 text-xs md:text-sm font-bold text-gray-800 dark:text-gray-200 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
               {pagination.pageIndex + 1} / {table.getPageCount()}
             </span>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               다음
             </button>
             <button
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               마지막
             </button>

@@ -20,6 +20,7 @@ interface Song {
   artist: string;
   bpm?: string | null;
   version: string;
+  imageUrl?: string | null;
   isExist?: boolean;
   isHot?: boolean;
   isLicense?: boolean;
@@ -43,13 +44,51 @@ interface Song {
 
 const columnHelper = createColumnHelper<Song>();
 
-// 날짜 포맷팅 함수: yyyy.mm.dd
-const formatDate = (date: Date | string): string => {
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}.${month}.${day}`;
+const getVersionShort = (version: string) => {
+  if (!version) return "";
+
+  // 1. GALAXY WAVE -> GW
+  // ex) GITADORA GALAXY WAVE DELTA -> GW DELTA
+  if (version.toUpperCase().includes("GALAXY WAVE")) {
+    return version.replace(/GITADORA\s+GALAXY\s+WAVE/i, "GW");
+  }
+
+  // 2. V series: GuitarFreaks V & DrumMania V -> V
+  // ex) GuitarFreaks V & DrumMania V -> V
+  // ex) GuitarFreaks V3 & DrumMania V3 -> V3
+  if (version.match(/GuitarFreaks\s+(V\d*)\s+&\s+DrumMania\s+(V\d*)/i)) {
+    const match = version.match(/GuitarFreaks\s+(V\d*)/i);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  // 3. Classic (XG pre): GUITARFREAKS Xth & drummania Yth -> GF Xth & DM Yth
+  // ex) GUITARFREAKS 4thMIX & drummania 3rdMIX -> GF 4th & DM 3rd
+  // ex) GUITARFREAKS 2ndMIX & drummania 1stMIX -> GF 2nd & DM 1st
+  if (version.match(/GUITARFREAKS\s+(.+?)MIX?\s+&\s+drummania\s+(.+?)MIX?/i)) {
+    return version
+      .replace(/GUITARFREAKS\s+/i, "GF")
+      .replace(/drummania\s+/i, "DM")
+      .replace(/MIX/gi, ""); // Remove MIX to make it shorter
+  }
+
+  // Special Case for 1st
+  if (version.match(/GUITARFREAKS\s+1st/i)) {
+    return "GF1st";
+  }
+
+  // 4. XG series
+  if (version.match(/GuitarFreaksXG/i)) {
+    return version
+      .replace(/GuitarFreaksXG/i, "XG")
+      .replace(/DrumManiaXG/i, "XG")
+      .replace(/\s+Groove to Live/i, "") // Remove subtitle for XG2
+      .replace(/&\s+XG/i, "&"); // Simplify
+  }
+
+  // Default: Remove "GITADORA " prefix
+  return version.replace(/^GITADORA\s+/, "");
 };
 
 export default function UserSongs() {
@@ -64,6 +103,32 @@ export default function UserSongs() {
 
   const columns = useMemo(
     () => [
+      columnHelper.display({
+        id: "jacket",
+        header: "자켓",
+        enableSorting: false,
+        size: 60,
+        cell: (info) => {
+          const song = info.row.original;
+          const imageUrl =
+            song.imageUrl ||
+            `/image/thumbnail/${encodeURIComponent(song.title)}.png`;
+          return (
+            <div className="w-12 h-12 relative rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={song.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23eee' width='100' height='100'/%3E%3Ctext fill='%23aaa' x='50' y='50' font-family='sans-serif' font-size='30' text-anchor='middle' alignment-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
+                }}
+              />
+            </div>
+          );
+        },
+      }),
       columnHelper.accessor("title", {
         header: "곡명",
         enableSorting: true,
@@ -72,7 +137,8 @@ export default function UserSongs() {
           return (
             <Link
               href={`/user/songs/${song.id}`}
-              className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
+              className="text-blue-600 dark:text-blue-400 hover:underline font-medium block truncate"
+              title={info.getValue()}
             >
               {info.getValue()}
             </Link>
@@ -85,7 +151,11 @@ export default function UserSongs() {
         cell: (info) => {
           const song = info.row.original;
           const artistName = song.artistInfo?.name || info.getValue();
-          return <span>{artistName}</span>;
+          return (
+            <span className="block truncate" title={artistName}>
+              {artistName}
+            </span>
+          );
         },
       }),
       columnHelper.accessor("bpm", {
@@ -106,6 +176,7 @@ export default function UserSongs() {
             }
             return <span>{bpm}</span>;
           }
+          // BPM 변화가 없는 경우 (단일 값)
           return <span>{bpm}</span>;
         },
       }),
@@ -238,26 +309,16 @@ export default function UserSongs() {
 
   return (
     <div className="max-w-6xl mx-auto py-6">
-      {/* Title */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
-          노래정보
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 text-sm">
-          게임에 수록된 모든 노래 정보를 확인할 수 있습니다
-        </p>
-      </div>
-
       {/* Table Card */}
-      <div className="shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="w-full shadow-xl rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm p-4 md:p-8 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700 gap-4">
           <div className="flex items-center gap-3">
             <div className="w-1 h-8 rounded-full bg-indigo-500"></div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               노래 리스트
             </h2>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
             <input
               type="text"
               placeholder="곡명, 작곡가, 태그로 검색..."
@@ -266,29 +327,38 @@ export default function UserSongs() {
                 setSearchQuery(e.target.value);
                 setPagination({ pageIndex: 0, pageSize: pagination.pageSize });
               }}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 w-full md:w-64"
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              페이지당 항목 수:
-            </span>
-            <select
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-            >
-              {[10, 20, 30, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center justify-end md:justify-start">
+              <select
+                value={table.getState().pagination.pageSize}
+                onChange={(e) => {
+                  table.setPageSize(Number(e.target.value));
+                }}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 w-full md:w-auto"
+              >
+                {[10, 20, 30, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}개씩 보기
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
+          <table className="w-full border-collapse text-sm table-fixed">
+            <colgroup>
+              <col className="w-[80px]" />
+              <col className="w-[30%]" />
+              <col className="w-[20%]" />
+              <col className="w-[100px]" />
+              <col className="w-[100px]" />
+              <col className="w-[15%]" />
+              <col className="w-[100px]" />
+            </colgroup>
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr
@@ -371,43 +441,168 @@ export default function UserSongs() {
           </table>
         </div>
 
+        {/* Mobile Card List View */}
+        <div className="lg:hidden space-y-4">
+          {table.getRowModel().rows.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              {searchQuery.trim()
+                ? "검색 결과가 없습니다"
+                : "노래 데이터가 없습니다"}
+            </div>
+          ) : (
+            table.getRowModel().rows.map((row) => {
+              const song = row.original;
+              const imageUrl =
+                song.imageUrl ||
+                `/image/thumbnail/${encodeURIComponent(song.title)}.png`;
+
+              return (
+                <div
+                  key={row.id}
+                  className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm relative overflow-hidden"
+                >
+                  <div className="flex gap-4">
+                    {/* Left: Jacket Image */}
+                    <div className="flex-shrink-0">
+                      <div className="w-20 h-20 relative rounded-md overflow-hidden bg-gray-100 dark:bg-gray-700 shadow-sm">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={imageUrl}
+                          alt={song.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src =
+                              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23eee' width='100' height='100'/%3E%3Ctext fill='%23aaa' x='50' y='50' font-family='sans-serif' font-size='10' text-anchor='middle' alignment-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right: Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="mb-1">
+                        <div className="flex flex-col items-start">
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded mb-1 max-w-full truncate">
+                            {getVersionShort(song.version)}
+                          </span>
+                          <Link
+                            href={`/user/songs/${song.id}`}
+                            className="text-lg font-bold text-blue-600 dark:text-blue-400 hover:underline break-words leading-tight block w-full"
+                            title={song.title}
+                          >
+                            {song.title}
+                          </Link>
+                          <div
+                            className="text-sm text-gray-600 dark:text-gray-300 mt-1 break-words w-full"
+                            title={song.artistInfo?.name || song.artist}
+                          >
+                            {song.artistInfo?.name || song.artist}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        BPM:{" "}
+                        {(() => {
+                          const bpm = song.bpm;
+                          if (!bpm) return "-";
+                          const bpmParts = bpm.split("-");
+                          if (bpmParts.length === 2) {
+                            const minBpm = bpmParts[0].trim();
+                            const maxBpm = bpmParts[1].trim();
+                            if (minBpm === maxBpm) {
+                              return maxBpm;
+                            }
+                            return bpm;
+                          }
+                          return bpm;
+                        })()}
+                      </div>
+
+                      <div className="space-y-1">
+                        {/* Tags */}
+                        {song.tags && song.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {song.tags.map((tagItem) => (
+                              <span
+                                key={tagItem.id}
+                                className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[10px]"
+                              >
+                                {tagItem.tag.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Flags */}
+                        <div className="flex flex-wrap gap-1">
+                          {song.isHot && (
+                            <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px]">
+                              HOT
+                            </span>
+                          )}
+                          {song.isLicense && (
+                            <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px]">
+                              라이센스
+                            </span>
+                          )}
+                          {song.isCover && (
+                            <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px]">
+                              커버
+                            </span>
+                          )}
+                          {song.isLong && (
+                            <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[10px]">
+                              롱
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
         {/* Pagination */}
-        <div className="flex items-center justify-between mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700">
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg">
+        <div className="flex flex-col md:flex-row items-center justify-between mt-6 pt-6 border-t-2 border-gray-200 dark:border-gray-700 gap-4">
+          <div className="text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg w-full md:w-auto text-center">
             {totalRows > 0
               ? `${startRow}-${endRow} / 총 ${totalRows}개`
               : "데이터가 없습니다"}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 md:gap-2 flex-wrap justify-center">
             <button
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               처음
             </button>
             <button
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               이전
             </button>
-            <span className="px-4 py-2 text-sm font-bold text-gray-800 dark:text-gray-200 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+            <span className="px-2 md:px-4 py-2 text-xs md:text-sm font-bold text-gray-800 dark:text-gray-200 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
               {table.getState().pagination.pageIndex + 1} /{" "}
               {table.getPageCount()}
             </span>
             <button
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               다음
             </button>
             <button
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
-              className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
+              className="px-2 md:px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs md:text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-sm hover:shadow-md disabled:hover:shadow-sm"
             >
               마지막
             </button>

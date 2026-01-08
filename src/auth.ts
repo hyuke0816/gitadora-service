@@ -6,7 +6,7 @@ import { UserRole } from "@prisma/client"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter(prisma) as any,
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
@@ -23,6 +23,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           image: profile.picture,
           role: role,
           emailVerified: profile.email_verified ? new Date() : null,
+          isOnboarded: false,
         }
       },
     }),

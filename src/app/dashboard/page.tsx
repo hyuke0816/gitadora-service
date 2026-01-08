@@ -4,12 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getAuthMe } from "@/entities/auth/api/auth.service";
 import { getAllSongs } from "@/entities/songs/api/songs.service";
 import { getAllArtists } from "@/entities/artists/api/artists.service";
 import { getAllVersions } from "@/entities/versions/api/versions.service";
 import { httpGet } from "@/shared/lib/http";
-import { useUserStore } from "@/shared/stores/user.store";
 
 interface DashboardStats {
   totalUsers: number;
@@ -236,30 +234,6 @@ function FutureFeaturesSection() {
 }
 
 export default function DashboardPage() {
-  const user = useUserStore((state) => state.user);
-  const setUser = useUserStore((state) => state.setUser);
-
-  // 사용자 정보 확인
-  useEffect(() => {
-    getAuthMe()
-      .then((data) => {
-        if (data.authenticated && data.user) {
-          setUser({
-            id: data.user.userId,
-            gameUserId: data.user.gameUserId,
-            username: data.user.username,
-            role: data.user.role,
-            name: data.user.name,
-            ingamename: data.user.ingamename || null,
-            title: data.user.title || null,
-          });
-        }
-      })
-      .catch(() => {
-        // 에러 발생 시 무시
-      });
-  }, [setUser]);
-
   // 대시보드 통계 조회
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats"],

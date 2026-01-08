@@ -67,27 +67,77 @@ model tb_users {
   comments     tb_comments[]
   skillRecords tb_user_skill_records[]
   skillHistory tb_user_skill_history[]
+  
+  // 소셜 로그인 유저와 연결 (1:1 관계 또는 N:1 관계, 여기서는 1:1 권장)
+  socialUserId String?  @unique // 한 소셜 계정은 하나의 게임 프로필만 가질 수 있게 함 (선택사항)
+  socialUser   User?    @relation(fields: [socialUserId], references: [id])
 
   @@map("tb_users")
 }
 
-// 인증용 사용자 테이블 (관리자/일반 사용자)
-model tb_auth_users {
-  id         Int      @id @default(autoincrement())
-  username   String   @unique // 로그인용 사용자명
-  password   String // 비밀번호 (해시)
-  role       UserRole @default(USER) // 사용자 역할
-  name       String? // 표시 이름
-  gameUserId Int? // tb_users 테이블의 id (USER 역할일 때 사용)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+// NextAuth Models
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
 
-  @@map("tb_auth_users")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("tb_accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tb_sessions")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  nickname      String?
+  bio           String?   @db.VarChar(100) // 100자 제한
+  isOnboarded   Boolean   @default(false)
+  role          UserRole  @default(USER)
+  accounts      Account[]
+  sessions      Session[]
+
+  // 기존 tb_users와 연결할 수 있는 필드 (선택적)
+  // gameUserId Int? 
+  gameProfile tb_users?
+
+  @@map("tb_social_users")
 }
 
 enum UserRole {
-  ADMIN // 관리자
-  USER // 일반 사용자
+  ADMIN
+  USER
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("tb_verification_tokens")
 }
 
 model tb_artist_informations {

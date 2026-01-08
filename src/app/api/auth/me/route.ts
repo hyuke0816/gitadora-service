@@ -1,52 +1,47 @@
-import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { auth } from "@/auth";
 import { prisma } from "@/shared/lib/prisma";
+import { NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+export async function DELETE() {
   try {
-    const cookieStore = await cookies();
-    const sessionData = cookieStore.get("session_data");
-
-    if (!sessionData) {
-      return NextResponse.json({ authenticated: false }, { status: 401 });
+    const session = await auth();
+    if (!session?.user?.id) {
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    try {
-      const decoded = JSON.parse(
-        Buffer.from(sessionData.value, "base64").toString("utf-8")
-      );
+    const userId = session.user.id;
 
-      // gameUserId가 있으면 tb_users 정보도 함께 조회
-      let gameUser = null;
-      if (decoded.gameUserId) {
-        gameUser = await prisma.tb_users.findUnique({
-          where: { id: decoded.gameUserId },
-          select: {
-            id: true,
-            name: true,
-            ingamename: true,
-            title: true,
-          },
+    await prisma.$transaction(async (tx) => {
+      // 1. 게임 프로필(tb_users) 찾기
+      const gameProfile = await tx.tb_users.findFirst({
+        where: { socialUserId: userId },
+      });
+
+      if (gameProfile) {
+        // 2. 댓글 삭제 (tb_comments는 onDelete: SetNull이므로 수동 삭제 필요)
+        await tx.tb_comments.deleteMany({
+          where: { userId: gameProfile.id },
+        });
+
+        // 3. 게임 프로필 삭제 (skillRecords, skillHistory는 Cascade로 자동 삭제됨)
+        await tx.tb_users.delete({
+          where: { id: gameProfile.id },
         });
       }
 
-      return NextResponse.json({
-        authenticated: true,
-        user: {
-          ...decoded,
-          name: gameUser?.name || null,
-          ingamename: gameUser?.ingamename || null,
-          title: gameUser?.title || null,
-        },
+      // 4. 소셜 계정(User) 삭제 (Account, Session은 Cascade로 자동 삭제됨)
+      await tx.user.delete({
+        where: { id: userId },
       });
-    } catch (error) {
-      return NextResponse.json({ authenticated: false }, { status: 401 });
-    }
+    });
+
+    return new NextResponse(JSON.stringify({ message: "Account deleted successfully" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error("Get user error:", error);
-    return NextResponse.json(
-      { message: "사용자 정보를 가져오는 중 오류가 발생했습니다." },
-      { status: 500 }
-    );
+    console.error("Failed to delete account:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
+

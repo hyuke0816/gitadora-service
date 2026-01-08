@@ -20,7 +20,7 @@ import {
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { useSong } from "@entities/songs/api/songs.queries";
-import { useAuthMe } from "@entities/auth/api/auth.queries";
+import { useSession } from "next-auth/react";
 import { versionsQueries } from "@entities/versions/api/versions.queries";
 import { apiClient } from "@shared/api/instances";
 import { useCreateSongLevel } from "@entities/songs/api/songs.mutaions";
@@ -127,7 +127,7 @@ const instrumentLabels: Record<string, string> = {
 export function UserSongDetail({ songId }: UserSongDetailProps) {
   const router = useRouter();
   const { data: song, isLoading } = useSong(songId);
-  const { data: auth } = useAuthMe();
+  const { data: session } = useSession();
   const { data: versions = [] } = useQuery(
     versionsQueries.getAllVersions()
   ) as { data: Version[] };
@@ -1053,7 +1053,7 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
         )}
 
         {/* 코멘트 작성 폼 */}
-        {auth?.authenticated ? (
+        {session?.user ? (
           <form onSubmit={handleSubmitComment} className="mb-6">
             <textarea
               value={newComment}

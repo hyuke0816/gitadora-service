@@ -48,6 +48,7 @@ interface SkillRecordInput {
   difficulty: "BASIC" | "ADVANCED" | "EXTREME" | "MASTER"; // 난이도
   achievement: number; // 달성률
   skillScore: number; // 스킬점수
+  level?: number; // 레벨 추가
   isHot: boolean; // HOT 곡 여부
   playedAt?: string; // ISO date string
 }
@@ -92,6 +93,20 @@ export async function POST(
         { status: 400 }
       );
       return setCorsHeaders(response, request);
+    }
+
+    // 기본 버전 정보 조회 (GITADORA GALAXY WAVE DELTA)
+    const defaultVersionName = "GITADORA GALAXY WAVE DELTA";
+    const defaultVersion = await prisma.tb_gitadora_versions.findFirst({
+      where: { name: defaultVersionName },
+    });
+
+    if (!defaultVersion) {
+      // 버전을 못 찾았을 때의 처리.
+      // 만약 DB에 버전이 하나도 없다면 심각한 문제이므로 500 에러를 반환하거나,
+      // 혹은 임시로 처리를 해야 할 수 있습니다.
+      // 여기서는 명확하게 에러를 던져서 운영자가 알 수 있게 합니다.
+      throw new Error(`Default version not found: ${defaultVersionName}`);
     }
 
     // 모든 곡 제목 수집 (곡 정보 존재 여부 확인용)
@@ -264,7 +279,8 @@ export async function POST(
             achievement: record.achievement,
             skillScore: record.skillScore,
             isHot: record.isHot,
-            version: "GITADORA GALAXY WAVE DELTA", // 버전 정보 저장
+            versionId: defaultVersion.id, // 수정: version string -> versionId
+            level: record.level || 0, // 추가: level (없으면 0)
             playedAt,
           },
         });

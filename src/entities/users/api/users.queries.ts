@@ -19,8 +19,8 @@ export const userKeys = {
     userId: number,
     instrumentType: "GUITAR" | "DRUM",
     historyId?: number,
-    version?: string
-  ) => ["users", userId, "skill", instrumentType, historyId, version] as const,
+    versionId?: number
+  ) => ["users", userId, "skill", instrumentType, historyId, versionId] as const,
 };
 
 export const useUserList = (instrumentType: "GUITAR" | "DRUM") => {
@@ -35,7 +35,7 @@ export const useUserSkill = (
   instrumentType: "GUITAR" | "DRUM",
   options?: {
     historyId?: number;
-    version?: string;
+    versionId?: number;
     enabled?: boolean;
   }
 ) => {
@@ -44,12 +44,12 @@ export const useUserSkill = (
       userId,
       instrumentType,
       options?.historyId,
-      options?.version
+      options?.versionId
     ),
     queryFn: () =>
       getUserSkill(userId, instrumentType, {
         historyId: options?.historyId,
-        version: options?.version,
+        versionId: options?.versionId,
       }),
     enabled: (options?.enabled ?? true) && !!userId && !isNaN(userId),
   });

@@ -10,7 +10,24 @@ export default function RootLayout({
 }) {
   return (
     <html>
-      <head />
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css"
+        />
+      </head>
       <body className="antialiased bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 flex flex-col min-h-screen">
         <Providers>
           <LayoutWrapper>{children}</LayoutWrapper>

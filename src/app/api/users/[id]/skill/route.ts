@@ -14,7 +14,7 @@ export async function GET(
     const instrumentType = (searchParams.get("instrumentType") ||
       "DRUM") as InstrumentType;
     const historyId = searchParams.get("historyId"); // 히스토리 ID
-    const version = searchParams.get("version"); // 버전 필터
+    const versionId = searchParams.get("versionId"); // 버전 ID 필터
 
     if (isNaN(userId)) {
       return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
@@ -52,8 +52,11 @@ export async function GET(
     };
 
     // 버전 필터 추가
-    if (version) {
-      whereClause.version = version;
+    if (versionId) {
+      const vId = parseInt(versionId);
+      if (!isNaN(vId)) {
+        whereClause.versionId = vId;
+      }
     }
 
     // 특정 날짜 이전의 기록만 조회
@@ -115,6 +118,7 @@ export async function GET(
       difficulty: record.difficulty,
       achievement: record.achievement,
       skillScore: record.skillScore,
+      level: record.level, // 레벨 추가
       isHot: record.isHot,
       playedAt: record.playedAt.toISOString(),
       songId: songIdMap.get(record.songTitle), // 매핑된 곡 ID 추가

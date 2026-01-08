@@ -49,6 +49,7 @@ model tb_gitadora_versions {
 
   // relation 설정
   songLevels   tb_song_levels[]
+  skillRecords tb_user_skill_records[]
 
   @@map("tb_gitadora_versions")
 }
@@ -209,14 +210,16 @@ model tb_user_skill_records {
   difficulty    Difficulty // 난이도 (BASIC, ADVANCED, EXTREME, MASTER)
   achievement   Float // 달성률 (0-100, 예: 98.30)
   skillScore    Float // 스킬 점수 (예: 171.04)
+  level         Float @default(0) // 곡 레벨 (예: 7.50)
   isHot         Boolean        @default(false) // HOT 곡 여부
-  version       String         @default("GITADORA GALAXY WAVE DELTA") // 버전 정보
+  versionId     Int            // 버전 ID
   playedAt      DateTime   @default(now()) // 플레이한 날짜/시간
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
   // relation 설정
   user          tb_users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  version       tb_gitadora_versions @relation(fields: [versionId], references: [id], onDelete: Cascade)
 
   // 같은 사용자가 같은 곡/악기타입/난이도/HOT여부로 여러 번 플레이할 수 있음 (히스토리 추적)
   @@index([userId, songTitle, instrumentType, difficulty, isHot])

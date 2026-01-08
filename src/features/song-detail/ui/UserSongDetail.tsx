@@ -145,6 +145,7 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
     useState<string>("GUITAR");
   const [selectedDifficulty, setSelectedDifficulty] =
     useState<string>("MASTER");
+  const [chartScale, setChartScale] = useState<number>(1);
 
   // 페이지 진입 시 스크롤 최상단으로 이동
   useEffect(() => {
@@ -418,7 +419,7 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
   }
 
   return (
-    <main className="max-w-6xl mx-auto">
+    <main className="pt-4 pb-8 px-4 sm:py-8 sm:px-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-4 sm:mb-6">
         <button
@@ -615,14 +616,13 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
         </div>
 
         {/* 필터링 UI */}
-        <div className="flex flex-col gap-4 mb-6">
-          {/* 악기 선택 */}
-          <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
             {["GUITAR", "BASS", "DRUM"].map((inst) => (
               <button
                 key={inst}
                 onClick={() => setSelectedInstrument(inst)}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   selectedInstrument === inst
                     ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
@@ -632,14 +632,12 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
               </button>
             ))}
           </div>
-
-          {/* 난이도 선택 */}
-          <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-xl overflow-x-auto">
+          <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg overflow-x-auto">
             {["BASIC", "ADVANCED", "EXTREME", "MASTER"].map((diff) => (
               <button
                 key={diff}
                 onClick={() => setSelectedDifficulty(diff)}
-                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap px-4 min-w-[60px] ${
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
                   selectedDifficulty === diff
                     ? `${difficultyColors[diff]} shadow-sm`
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
@@ -702,58 +700,105 @@ export function UserSongDetail({ songId }: UserSongDetailProps) {
                   </div>
 
                   <div className="relative">
-                    <div className="grid grid-cols-[40px_1fr] h-80 w-full min-w-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
-                      {/* Y축 레이블 (HTML) */}
-                      <div className="flex flex-col justify-between items-end pb-[30px] pt-[10px] pr-2 border-r border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800 text-[10px] text-gray-500 font-medium select-none">
-                        <div className="leading-none">100</div>
-                        <div className="leading-none">80</div>
-                        <div className="leading-none">60</div>
-                        <div className="leading-none">40</div>
-                        <div className="leading-none">20</div>
-                        <div className="leading-none">0</div>
+                    {/* 줌 버튼 */}
+                    <div className="flex justify-end gap-2 mb-2">
+                      {[
+                        { label: "Fit", value: 1 },
+                        { label: "x1.5", value: 1.5 },
+                        { label: "x2", value: 2 },
+                        { label: "x3", value: 3 },
+                      ].map((zoom) => (
+                        <button
+                          key={zoom.label}
+                          onClick={() => setChartScale(zoom.value)}
+                          className={`px-3 py-1 text-xs font-medium rounded border transition-colors ${
+                            chartScale === zoom.value
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          {zoom.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex h-80 w-full min-w-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800">
+                      {/* Y축 고정 영역 */}
+                      <div className="w-[60px] h-full flex-shrink-0 border-r border-gray-100 dark:border-gray-700 z-10 bg-white dark:bg-gray-800">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart
+                            margin={{
+                              top: 20,
+                              right: 0,
+                              bottom: 20,
+                              left: 0,
+                            }}
+                          >
+                            <XAxis
+                              type="number"
+                              height={30}
+                              tick={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              type="number"
+                              dataKey="y"
+                              name="Achievement"
+                              unit="%"
+                              domain={[0, 100]}
+                              tick={{ fontSize: 12 }}
+                              width={60}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <Scatter
+                              data={[{ x: 0, y: 0 }]}
+                              fill="transparent"
+                            />
+                          </ScatterChart>
+                        </ResponsiveContainer>
                       </div>
 
                       {/* 데이터 스크롤 영역 */}
-                      <div className="overflow-x-auto relative scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+                      <div className="flex-1 overflow-x-auto relative">
                         {stats.points && stats.points.length > 0 ? (
                           <div
                             className="h-full"
                             style={{
                               width:
-                                Math.max(100, stats.points.length * 2) + "%", // 데이터 개수에 비례하여 너비 증가
+                                chartScale === 1
+                                  ? "100%"
+                                  : `${chartScale * 100}%`,
                               minWidth: "100%",
                             }}
                           >
                             <ResponsiveContainer width="100%" height="100%">
                               <ScatterChart
                                 margin={{
-                                  top: 10,
+                                  top: 20,
                                   right: 20,
-                                  bottom: 0,
-                                  left: 10,
+                                  bottom: 20,
+                                  left: 0,
                                 }}
                               >
                                 <CartesianGrid
                                   strokeDasharray="3 3"
                                   vertical={true}
                                   horizontal={true}
-                                  strokeOpacity={0.5}
                                 />
                                 <XAxis
                                   type="number"
                                   dataKey="x"
                                   name="Skill"
                                   domain={["auto", "auto"]}
-                                  tick={{ fontSize: 10 }}
+                                  tick={{ fontSize: 12 }}
                                   height={30}
-                                  tickLine={false}
-                                  axisLine={false}
                                 />
                                 <YAxis
                                   type="number"
                                   dataKey="y"
                                   domain={[0, 100]}
-                                  hide={true}
+                                  hide={true} // Y축 숨김 (왼쪽 고정 차트 사용)
                                 />
                                 <RechartsTooltip
                                   cursor={{ strokeDasharray: "3 3" }}

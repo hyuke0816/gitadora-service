@@ -16,6 +16,7 @@ export interface SkillRecord {
   difficulty: "BASIC" | "ADVANCED" | "EXTREME" | "MASTER";
   achievement: number;
   skillScore: number;
+  level: number; // 레벨 추가
   isHot: boolean;
   playedAt: string;
   songId?: number; // 곡 ID (상세 페이지 이동용)
@@ -64,7 +65,7 @@ export const getUserList = async (
  * @param userId 유저 ID
  * @param instrumentType 악기 타입
  * @param historyId 히스토리 ID (선택)
- * @param version 버전 (선택)
+ * @param versionId 버전 ID (선택)
  * @returns
  */
 export const getUserSkill = async (
@@ -72,7 +73,7 @@ export const getUserSkill = async (
   instrumentType: "GUITAR" | "DRUM",
   options?: {
     historyId?: number;
-    version?: string;
+    versionId?: number;
   }
 ): Promise<SkillData> => {
   const url = new URL(`/api/users/${userId}/skill`, window.location.origin);
@@ -80,8 +81,8 @@ export const getUserSkill = async (
   if (options?.historyId) {
     url.searchParams.set("historyId", options.historyId.toString());
   }
-  if (options?.version) {
-    url.searchParams.set("version", options.version);
+  if (options?.versionId) {
+    url.searchParams.set("versionId", options.versionId.toString());
   }
   return httpGet<SkillData>(url.toString());
 };

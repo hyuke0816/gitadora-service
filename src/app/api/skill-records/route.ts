@@ -43,6 +43,7 @@ interface SkillRecordInput {
   difficulty: "BASIC" | "ADVANCED" | "EXTREME" | "MASTER";
   achievement: number;
   skillScore: number;
+  level?: number; // 레벨 추가 (선택적)
   isHot: boolean;
   playedAt?: string;
 }
@@ -56,6 +57,7 @@ interface ProfileInfo {
 interface BulkSkillRecordInput {
   records: SkillRecordInput[];
   profileInfo: ProfileInfo; // 필수값으로 변경
+  version: string; // 버전명 (예: "GITADORA GALAXY WAVE DELTA")
 }
 
 // POST /api/skill-records -> Gitadora ID 기반 스킬 기록 업로드
@@ -73,6 +75,21 @@ export async function POST(request: NextRequest) {
     }
 
     const { gitadoraId, name, title } = body.profileInfo;
+    const versionName = body.version || "GITADORA GALAXY WAVE DELTA"; // 기본값 설정
+
+    // 버전 정보 조회
+    const version = await prisma.tb_gitadora_versions.findFirst({
+      where: { name: versionName },
+    });
+
+    if (!version) {
+      const response = NextResponse.json(
+        { message: `Version not found: ${versionName}` },
+        { status: 404 }
+      );
+      return setCorsHeaders(response, request);
+    }
+    const versionId = version.id;
 
     // 2. 유저 조회 또는 생성
     let user = await prisma.tb_users.findUnique({
@@ -144,12 +161,23 @@ export async function POST(request: NextRequest) {
     const errors = [];
     const recordsByInstrumentType = new Map<string, any[]>();
 
+    console.log(`Processing ${body.records.length} records for user ${userId}`);
+
     for (const record of body.records) {
       try {
         // 유효성 검사
-        if (!record.songTitle || typeof record.songTitle !== "string") continue;
-        if (!["GUITAR", "BASS", "DRUM", "OPEN"].includes(record.instrumentType)) continue;
-        if (!["BASIC", "ADVANCED", "EXTREME", "MASTER"].includes(record.difficulty)) continue;
+        if (!record.songTitle || typeof record.songTitle !== "string") {
+            console.warn("Invalid songTitle:", record);
+            continue;
+        }
+        if (!["GUITAR", "BASS", "DRUM", "OPEN"].includes(record.instrumentType)) {
+            console.warn("Invalid instrumentType:", record);
+            continue;
+        }
+        if (!["BASIC", "ADVANCED", "EXTREME", "MASTER"].includes(record.difficulty)) {
+            console.warn("Invalid difficulty:", record);
+            continue;
+        }
 
         const playedAt = record.playedAt ? new Date(record.playedAt) : uploadTime;
 
@@ -162,8 +190,9 @@ export async function POST(request: NextRequest) {
             difficulty: record.difficulty,
             achievement: record.achievement,
             skillScore: record.skillScore,
+            level: record.level || 0,
             isHot: record.isHot,
-            version: "GITADORA GALAXY WAVE DELTA",
+            versionId: versionId,
             playedAt,
           },
         });

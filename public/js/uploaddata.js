@@ -13,10 +13,10 @@
   // 설정: 서버 URL (실제 배포 시 변경 필요)
   // 로컬 개발 (HTTPS): https://localhost:30001 (포트 확인 필요!)
   // 프로덕션: 실제 서버 도메인으로 변경 (예: https://your-domain.com)
-  // const API_BASE_URL = "https://localhost:30001"; // 로컬 개발 환경 (HTTPS)
+  const API_BASE_URL = "https://localhost:30001"; // 로컬 개발 환경 (HTTPS)
 
   // 프로덕션 환경에서는 아래 주석을 해제하고 위의 localhost를 주석 처리하세요:
-  const API_BASE_URL = "https://gitadora.info";
+  // const API_BASE_URL = "https://gitadora.info";
 
   // 난이도 클래스명에서 난이도 추출
   function getDifficultyFromClass(className) {
@@ -431,18 +431,39 @@
     }
   }
 
+  // 버전명 추출
+  function getVersionName() {
+    try {
+      const path = window.location.pathname;
+      // URL 예시: /game/gfdm/gitadora_galaxywave_delta/p/playdata/skill.html
+
+      if (path.includes("gitadora_galaxywave"))
+        return "GITADORA GALAXY WAVE DELTA";
+      if (path.includes("gitadora_fuzzup")) return "GITADORA FUZZ-UP";
+      if (path.includes("gitadora_highvoltage")) return "GITADORA HIGH-VOLTAGE";
+      if (path.includes("gitadora_nextage")) return "GITADORA NEX+AGE";
+      if (path.includes("gitadora_exchain")) return "GITADORA EXCHAIN";
+      if (path.includes("gitadora_matixx")) return "GITADORA Matixx";
+    } catch (e) {
+      console.warn("Version detection failed:", e);
+    }
+    return "GITADORA GALAXY WAVE DELTA"; // 기본값
+  }
+
   // 서버로 데이터 업로드 (Gitadora ID 기반)
-  async function uploadSkillData(records, profileInfo) {
+  async function uploadSkillData(records, profileInfo, version) {
     try {
       const payload = {
         records,
         profileInfo, // Gitadora ID 포함
+        version,
       };
 
       console.log("업로드 요청:", {
         url: `${API_BASE_URL}/api/skill-records`,
         recordCount: records.length,
         profileInfo: profileInfo,
+        version: version,
       });
 
       const response = await fetch(`${API_BASE_URL}/api/skill-records`, {
@@ -542,7 +563,8 @@
       }
 
       // 3. 서버로 업로드
-      const result = await uploadSkillData(records, profileInfo);
+      const version = getVersionName();
+      const result = await uploadSkillData(records, profileInfo, version);
 
       // 로딩 오버레이 제거
       removeLoadingOverlay();

@@ -76,6 +76,9 @@ export function Header() {
   // 스크롤 감지하여 헤더 숨김/표시 처리
   useEffect(() => {
     const handleScroll = () => {
+      // 모바일 메뉴가 열려있으면 헤더 숨김 처리 하지 않음
+      if (isMobileMenuOpen) return;
+
       const currentScrollY = window.scrollY;
 
       // 최상단이거나 스크롤을 올릴 때 표시
@@ -90,7 +93,19 @@ export function Header() {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [isMobileMenuOpen]);
+
+  // 모바일 메뉴 열림 시 바디 스크롤 잠금
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileMenuOpen]);
 
   // 사용자 정보 조회
   useEffect(() => {
@@ -190,7 +205,7 @@ export function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full border-b bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 transition-transform duration-300 ${
+      className={`sticky top-0 z-50 w-full bg-white dark:bg-gray-900 transition-transform duration-300 border-b border-gray-200 dark:border-gray-800 ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
@@ -339,12 +354,12 @@ export function Header() {
 
       {/* 확장 탭 UI (조건부 렌더링) */}
       {isTabVisiblePage && (
-        <div className="flex border-t border-gray-100 dark:border-gray-800">
+        <div className="flex">
           {(["GUITAR", "DRUM"] as const).map((type) => (
             <button
               key={type}
               onClick={() => handleTabChange(type)}
-              className="flex-1 relative py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+              className="flex-1 relative py-3 hover:bg-gray-100 dark:hover:bg-gray-800 active:bg-gray-200 dark:active:bg-gray-700 transition-colors group"
             >
               <div className="flex justify-center items-center h-full">
                 <span

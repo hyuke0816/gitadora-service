@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@shared/lib/prisma";
+import { auth } from "@/auth";
 
 // CORS 헤더 설정
 function setCorsHeaders(response: NextResponse, request: NextRequest) {
@@ -91,19 +92,58 @@ export async function POST(request: NextRequest) {
     }
     const versionId = version.id;
 
-    // 2. 유저 조회 또는 생성
+    const session = await auth();
+
+    // 2. 유저 조회 및 매핑 로직
     let user = await prisma.tb_users.findUnique({
       where: { gitadoraId },
     });
 
+    // 로그인 상태일 경우 충돌 체크 및 매핑 처리
+    if (session?.user?.id) {
+      const currentUserId = session.user.id;
+
+      // 1. 이미 다른 계정에 연동된 데이터인지 확인 (소셜 ID 불일치)
+      if (user && user.socialUserId && user.socialUserId !== currentUserId) {
+        const response = NextResponse.json(
+          { 
+            message: "이미 다른 계정에 연동된 데이터입니다. 관리자에게 문의해주세요.",
+            code: "DUPLICATE_MAPPING_OTHER_ACCOUNT" 
+          },
+          { status: 409 }
+        );
+        return setCorsHeaders(response, request);
+      }
+
+      // 2. 현재 로그인한 계정이 이미 다른 데이터와 연동되어 있는지 확인 (Gitadora ID 불일치)
+      // 단, 사용자가 "연동 해제"를 요청하거나 "새 데이터로 덮어쓰기"를 원할 수 있으므로,
+      // API 응답 코드를 명확히 하여 클라이언트에서 처리 가능하도록 함.
+      const myLinkedProfile = await prisma.tb_users.findUnique({
+        where: { socialUserId: currentUserId },
+      });
+
+      if (myLinkedProfile && myLinkedProfile.gitadoraId !== gitadoraId) {
+        const response = NextResponse.json(
+          { 
+            message: `현재 계정은 이미 다른 Gitadora ID(${myLinkedProfile.gitadoraId})와 연동되어 있습니다. 관리자에게 문의해주세요.`,
+            code: "ALREADY_MAPPED_TO_DIFFERENT_DATA"
+          },
+          { status: 409 }
+        );
+        return setCorsHeaders(response, request);
+      }
+    }
+
     if (!user) {
       console.log(`Creating new user for gitadoraId: ${gitadoraId}`);
+      // 신규 생성 시, 로그인 상태라면 바로 매핑
       user = await prisma.tb_users.create({
         data: {
           gitadoraId,
-          name: name || `User-${gitadoraId}`, // 이름이 없으면 임시 이름 생성
+          name: name || `User-${gitadoraId}`,
           ingamename: name || null,
           title: title || null,
+          socialUserId: session?.user?.id || null, 
         },
       });
     } else {
@@ -111,9 +151,22 @@ export async function POST(request: NextRequest) {
       const updateData: any = {};
       if (name) updateData.ingamename = name;
       if (title) updateData.title = title;
+
+      // 로그인 상태이고
+      if (session?.user?.id) {
+        // 3. 아직 연동되지 않은 데이터라면 연동 처리 (매핑)
+        if (!user.socialUserId) {
+             updateData.socialUserId = session.user.id;
+             console.log(`Mapping existing anonymous user ${gitadoraId} to social user ${session.user.id}`);
+        } 
+        // 4. (추가) 내 계정과 이미 연동된 데이터라면? -> 정상 진행 (이미 내 거니까)
+        else if (user.socialUserId === session.user.id) {
+             console.log(`User ${gitadoraId} is already mapped to current session user.`);
+        }
+      }
       
       if (Object.keys(updateData).length > 0) {
-        await prisma.tb_users.update({
+        user = await prisma.tb_users.update({
           where: { id: user.id },
           data: updateData,
         });

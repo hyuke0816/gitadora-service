@@ -3,76 +3,73 @@
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import { toast } from "sonner";
-import { useUserStore } from "@/shared/stores/user.store";
-import { useAuthMe } from "@/entities/auth/api/auth.queries";
+import { useSession, signOut } from "next-auth/react";
 import { instrumentLabels } from "@/shared/components/InstrumentTypeSelector";
 
 const adminMenuItems = [
   {
     title: "버전 정보 관리",
     href: "/admin/versions",
-    icon: "📦",
   },
   {
     title: "작곡가 정보 관리",
     href: "/admin/artists",
-    icon: "🎼",
   },
   {
     title: "노래 정보 관리",
     href: "/admin/songs",
-    icon: "🎵",
   },
   {
     title: "태그 정보 관리",
     href: "/admin/tags",
-    icon: "🏷️",
   },
   {
     title: "이벤트 관리",
     href: "/admin/events",
-    icon: "🎉",
   },
 ];
 
-const getUserMenuItems = (userId: string | null) => [
-  {
-    title: "유저목록",
-    href: `/user/list`,
-    icon: "👥",
-  },
-  {
-    title: "노래정보",
-    href: `/user/songs`,
-    icon: "🎵",
-  },
-  {
-    title: "버전정보",
-    href: `/user/versions`,
-    icon: "📦",
-  },
-  {
-    title: "작곡가정보",
-    href: `/user/artists`,
-    icon: "🎼",
-  },
-];
+const getUserMenuItems = (userId: string | null) => {
+  const items = [
+    {
+      title: "유저목록",
+      href: `/user/list`,
+    },
+    {
+      title: "노래정보",
+      href: `/user/songs`,
+    },
+    {
+      title: "버전정보",
+      href: `/user/versions`,
+    },
+    {
+      title: "작곡가정보",
+      href: `/user/artists`,
+    },
+  ];
+
+  if (userId) {
+    items.unshift({
+      title: "내 정보 관리",
+      href: `/user/${userId}/myinfo`,
+    });
+  }
+
+  return items;
+};
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const user = useUserStore((state) => state.user);
-  const setUser = useUserStore((state) => state.setUser);
-  const clearUser = useUserStore((state) => state.clearUser);
+  const { data: session, status } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false); // 데스크탑 드롭다운 메뉴
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // 모바일 메뉴
   const menuRef = useRef<HTMLDivElement>(null);
-  
-  // React Query 훅 사용 (캐싱 및 중복 호출 방지)
-  const { data: authData, isLoading: isAuthLoading } = useAuthMe();
-  const isLoading = isAuthLoading;
+
+  const isLoading = status === "loading";
+  const user = session?.user;
 
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
@@ -111,24 +108,6 @@ export function Header() {
     };
   }, [isMobileMenuOpen]);
 
-  // 사용자 정보 동기화 (authData가 변경될 때만 실행)
-  useEffect(() => {
-    if (authData?.authenticated && authData.user) {
-      // 이미 같은 유저 정보가 스토어에 있다면 업데이트 생략 (무한루프 방지)
-      if (user?.id === authData.user.userId) return;
-
-      setUser({
-        id: authData.user.userId,
-        gameUserId: authData.user.gameUserId,
-        username: authData.user.username,
-        role: authData.user.role,
-        name: authData.user.name || null,
-        ingamename: authData.user.ingamename || null,
-        title: authData.user.title || null,
-      });
-    }
-  }, [authData, setUser, user]);
-
   // 메뉴 외부 클릭 시 닫기 (데스크탑)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -153,19 +132,15 @@ export function Header() {
   }, [pathname]);
 
   const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      // 사용자 스토어 초기화
-      clearUser();
-      // React Query 캐시 초기화 (필요하다면 queryClient.invalidateQueries 사용)
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    await signOut({ callbackUrl: "/" });
   };
 
-  const isAdmin = user?.role === "ADMIN";
+  // 사용자 권한 확인 (임시: 이메일 등으로 관리자 권한 부여 로직 필요할 수 있음)
+  // 현재는 user.role 같은 정보가 없으므로 기본값 사용하거나,
+  // auth.ts에서 session callback으로 role 정보를 넣어줘야 함.
+  // 일단 여기서는 user가 있으면 로그인된 것으로 간주
+  // const isAdmin = user?.role === "ADMIN";
+  const isAdmin = false; // TODO: 관리자 권한 로직 추가 필요
 
   // 유저 페이지 경로 확인
   const isUserPage = pathname?.startsWith("/user");
@@ -173,10 +148,7 @@ export function Header() {
   const userIdMatch = pathname?.match(/^\/user\/(\d+)/);
   const userIdFromPath = userIdMatch ? userIdMatch[1] : null;
   const userId =
-    userIdFromPath ||
-    user?.gameUserId?.toString() ||
-    user?.id?.toString() ||
-    null;
+    userIdFromPath || session?.user?.gameProfileId?.toString() || null;
 
   // 표시할 메뉴 아이템 결정
   const menuItems = isAdmin
@@ -198,6 +170,17 @@ export function Header() {
     const newParams = new URLSearchParams(searchParams?.toString());
     newParams.set("instrumentType", type);
     router.replace(`${pathname}?${newParams.toString()}`);
+  };
+
+  const handleUserClick = () => {
+    const targetPath = user?.gameProfileId
+      ? `/user/${user.gameProfileId}/myinfo`
+      : "/onboarding";
+
+    if (pathname !== targetPath) {
+      router.push(targetPath);
+    }
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -260,7 +243,7 @@ export function Header() {
                             : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
                         }`}
                       >
-                        <span className="text-lg">{item.icon}</span>
+                        {/* 아이콘 제거됨 */}
                         <span>{item.title}</span>
                       </Link>
                     );
@@ -270,24 +253,18 @@ export function Header() {
             </div>
           ) : null}
 
-          {/* Language Switcher Button */}
-          {/* <button
-            className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-            onClick={() => {
-              toast.info("다국어 설정 (준비 중)");
-            }}
-          >
-            언어
-          </button> */}
-
           {/* Auth Buttons */}
           {isLoading ? (
             <div className="w-20 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
           ) : user ? (
             <>
-              <span className="text-sm text-gray-700 dark:text-gray-300">
-                {user.username} ({user.role === "ADMIN" ? "관리자" : "사용자"})
-              </span>
+              {/* 프로필 이미지 제거됨 */}
+              <button
+                onClick={handleUserClick}
+                className="flex items-center gap-2 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+              >
+                {user.nickname || user.name}
+              </button>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
@@ -295,22 +272,18 @@ export function Header() {
                 로그아웃
               </button>
             </>
-          ) : /* <Link
+          ) : (
+            <Link
               href="/login"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
-              >
+            >
               로그인
-            </Link> */
-          null}
+            </Link>
+          )}
         </div>
 
         {/* Mobile Navigation Button */}
         <div className="flex md:hidden items-center gap-2">
-          {/* Mobile Auth (Login only if not logged in) - Optional, kept in menu for now or show minimal info? 
-              Let's put everything in the hamburger menu for cleaner look, 
-              but maybe show Login button if not logged in? 
-              For now, just hamburger.
-          */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"
@@ -385,21 +358,25 @@ export function Header() {
             {isLoading ? (
               <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full" />
             ) : user ? (
-              <div className="flex flex-col gap-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="font-medium text-gray-900 dark:text-gray-100">
-                  {user.username}
+              <button
+                onClick={handleUserClick}
+                className="w-full flex flex-col gap-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-2">
+                  {/* 프로필 이미지 제거됨 */}
+                  <div className="font-medium text-gray-900 dark:text-gray-100">
+                    {user.nickname || user.name}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {user.role === "ADMIN" ? "관리자" : "사용자"}
-                </div>
-              </div>
-            ) : /* <Link
+              </button>
+            ) : (
+              <Link
                 href="/login"
                 className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
               >
                 로그인
-              </Link> */
-            null}
+              </Link>
+            )}
 
             {/* Menu Items */}
             {menuItems.length > 0 && (
@@ -421,7 +398,7 @@ export function Header() {
                           : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                       }`}
                     >
-                      <span className="text-xl">{item.icon}</span>
+                      {/* 아이콘 제거됨 */}
                       <span>{item.title}</span>
                     </Link>
                   );
@@ -429,24 +406,14 @@ export function Header() {
               </div>
             )}
 
-            {/* Language & Logout */}
+            {/* Logout */}
             <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-              {/* <button
-                className="w-full flex items-center gap-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors text-left"
-                onClick={() => {
-                  toast.info("다국어 설정 (준비 중)");
-                }}
-              >
-                <span className="text-xl">🌐</span>
-                <span>언어 설정</span>
-              </button> */}
-
               {user && (
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center gap-3 px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors text-left"
                 >
-                  <span className="text-xl">🚪</span>
+                  {/* 아이콘 제거됨 */}
                   <span>로그아웃</span>
                 </button>
               )}

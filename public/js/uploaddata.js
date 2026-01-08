@@ -233,14 +233,7 @@
 
     // 로딩 메시지 업데이트 함수
     const updateProgress = () => {
-      const overlay = document.getElementById("gitadora-loading-overlay");
-      if (overlay) {
-        const message = overlay.querySelector("div").firstElementChild;
-        if (message) {
-          message.textContent = `데이터 수집 중...\n${collectedCount}/${pages.length} 페이지 완료`;
-          message.style.whiteSpace = "pre-line";
-        }
-      }
+      updateLoadingMessage(`데이터 수집 중...\n${collectedCount}/${pages.length} 페이지 완료`);
     };
 
     updateProgress();
@@ -276,8 +269,27 @@
     return allRecords;
   }
 
-  // 로딩 오버레이 생성
-  function createLoadingOverlay() {
+  // 로딩 오버레이 생성 (SweetAlert2 사용 시도)
+  async function createLoadingOverlay() {
+    // 1. SweetAlert2가 로드될 때까지 기다림 (최대 2초)
+    try {
+        await loadSweetAlert2();
+        if (window.Swal) {
+            window.Swal.fire({
+                title: '데이터 처리 중...',
+                html: '잠시만 기다려주세요.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    window.Swal.showLoading();
+                }
+            });
+            return true; // Swal 사용됨
+        }
+    } catch (e) {
+        console.warn("Swal loading failed for overlay:", e);
+    }
+    
+    // 2. Swal 로드 실패 시 기존 DOM 오버레이 사용 (Fallback)
     // 이미 존재하는 오버레이가 있으면 제거
     const existing = document.getElementById("gitadora-loading-overlay");
     if (existing) {
@@ -287,6 +299,7 @@
     // 오버레이 컨테이너 생성
     const overlay = document.createElement("div");
     overlay.id = "gitadora-loading-overlay";
+    // ... (기존 스타일 코드 유지) ...
     overlay.style.cssText = `
       position: fixed;
       top: 0;
@@ -362,11 +375,17 @@
     overlay.appendChild(contentBox);
     document.body.appendChild(overlay);
 
-    return overlay;
+    return false; // DOM 오버레이 사용됨
   }
 
   // 로딩 오버레이 제거
   function removeLoadingOverlay() {
+    // Swal이 열려있으면 닫기
+    if (window.Swal && window.Swal.isVisible()) {
+        window.Swal.close();
+    }
+    
+    // DOM 오버레이가 있으면 제거
     const overlay = document.getElementById("gitadora-loading-overlay");
     if (overlay) {
       overlay.remove();
@@ -471,7 +490,7 @@
         headers: {
           "Content-Type": "application/json",
         },
-        // credentials: "include" 제거 (쿠키 인증 불필요)
+        credentials: "include", // 쿠키 인증 포함 (세션 연동을 위해 필요)
         body: JSON.stringify(payload),
       });
 
@@ -507,33 +526,74 @@
     }
   }
 
+  // SweetAlert2 로드 함수
+  function loadSweetAlert2() {
+    return new Promise((resolve, reject) => {
+      if (window.Swal) {
+        resolve(window.Swal);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/sweetalert2@11";
+      script.onload = () => resolve(window.Swal);
+      script.onerror = () => reject(new Error("SweetAlert2 load failed"));
+      document.head.appendChild(script);
+    });
+  }
+
+  // 로딩 메시지 업데이트 함수
+  function updateLoadingMessage(messageText) {
+      if (window.Swal && window.Swal.isVisible()) {
+          // Swal 로딩 메시지 업데이트
+          const content = window.Swal.getHtmlContainer();
+          if (content) content.textContent = messageText;
+      } else {
+          // DOM 오버레이 메시지 업데이트 (Fallback)
+          const overlay = document.getElementById("gitadora-loading-overlay");
+          if (overlay) {
+            const contentBox = overlay.querySelector("div");
+            if (contentBox) {
+              const message = contentBox.firstElementChild;
+              if (message) {
+                message.textContent = messageText;
+                message.style.whiteSpace = "pre-line";
+              }
+            }
+          }
+      }
+  }
+
   // 메인 실행 함수
   async function main() {
     // 로딩 오버레이 표시
-    createLoadingOverlay();
+    await createLoadingOverlay();
+    
+    // SweetAlert2 로드 시작 (백그라운드) - 이미 createLoadingOverlay에서 로드되었을 수 있음
+    // const swalPromise = loadSweetAlert2().catch(err => console.warn("Swal load failed, fallback to alert", err));
 
     try {
       // 1. 프로필 정보 우선 수집 (Gitadora ID 필수)
       // 로딩 오버레이 메시지 업데이트
-      const overlay = document.getElementById("gitadora-loading-overlay");
-      if (overlay) {
-        const contentBox = overlay.querySelector("div");
-        if (contentBox) {
-          const message = contentBox.firstElementChild;
-          if (message) {
-            message.textContent = `프로필 정보 확인 중...`;
-          }
-        }
-      }
+      updateLoadingMessage("프로필 정보 확인 중...");
 
       const profileInfo = await fetchProfileInfo();
       console.log("추출된 프로필 정보:", profileInfo);
 
       if (!profileInfo.gitadoraId) {
         removeLoadingOverlay();
-        alert(
-          "GITADORA ID를 찾을 수 없습니다.\n\n로그인 상태를 확인하거나, 프로필 페이지(playdata/profile.html)에 한 번 접속한 후 다시 시도해주세요."
-        );
+        const Swal = window.Swal;
+        if (Swal) {
+          Swal.fire({
+            icon: 'error',
+            title: 'GITADORA ID 누락',
+            text: 'GITADORA ID를 찾을 수 없습니다.\n로그인 상태를 확인하거나, 프로필 페이지(playdata/profile.html)에 한 번 접속한 후 다시 시도해주세요.',
+            confirmButtonText: '확인'
+          });
+        } else {
+          alert(
+            "GITADORA ID를 찾을 수 없습니다.\n\n로그인 상태를 확인하거나, 프로필 페이지(playdata/profile.html)에 한 번 접속한 후 다시 시도해주세요."
+          );
+        }
         return;
       }
 
@@ -542,25 +602,26 @@
 
       if (records.length === 0) {
         removeLoadingOverlay();
-        alert(
-          "추출된 데이터가 없습니다.\n\n다음을 확인해주세요:\n1. 스킬 페이지(playdata/skill.html)에서 실행했는지\n2. 브라우저 콘솔에 오류가 없는지"
-        );
+        const Swal = window.Swal;
+        if (Swal) {
+          Swal.fire({
+            icon: 'warning',
+            title: '데이터 없음',
+            html: '추출된 데이터가 없습니다.<br><br>다음을 확인해주세요:<br>1. 스킬 페이지(playdata/skill.html)에서 실행했는지<br>2. 브라우저 콘솔에 오류가 없는지',
+            confirmButtonText: '확인'
+          });
+        } else {
+          alert(
+            "추출된 데이터가 없습니다.\n\n다음을 확인해주세요:\n1. 스킬 페이지(playdata/skill.html)에서 실행했는지\n2. 브라우저 콘솔에 오류가 없는지"
+          );
+        }
         return;
       }
 
       console.log(`총 ${records.length}개 기록 추출됨`);
 
       // 로딩 오버레이 메시지 업데이트
-      if (overlay) {
-        const contentBox = overlay.querySelector("div");
-        if (contentBox) {
-          const message = contentBox.firstElementChild;
-          if (message) {
-            message.textContent = `데이터 추출 완료!\n총 ${records.length}개\n업로드 중...`;
-            message.style.whiteSpace = "pre-line";
-          }
-        }
-      }
+      updateLoadingMessage(`데이터 추출 완료!\n총 ${records.length}개\n업로드 중...`);
 
       // 3. 서버로 업로드
       const version = getVersionName();
@@ -581,14 +642,35 @@
           window.location.href = redirectUrl;
         }
       } else {
-        alert(
-          "업로드에 실패했습니다: " + (result.message || "알 수 없는 오류")
-        );
+        const Swal = window.Swal;
+        if (Swal) {
+          Swal.fire({
+            icon: 'error',
+            title: '업로드 실패',
+            text: result.message || "알 수 없는 오류",
+            confirmButtonText: '확인'
+          });
+        } else {
+          alert(
+            "업로드에 실패했습니다: " + (result.message || "알 수 없는 오류")
+          );
+        }
       }
     } catch (error) {
       removeLoadingOverlay();
       console.error("Main execution error:", error);
-      alert("오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));
+      
+      const Swal = window.Swal;
+      if (Swal) {
+        Swal.fire({
+            icon: 'error',
+            title: '오류 발생',
+            text: error.message || "알 수 없는 오류",
+            confirmButtonText: '확인'
+        });
+      } else {
+        alert("오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));
+      }
     }
   }
 

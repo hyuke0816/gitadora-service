@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { instrumentLabels } from "@/shared/components/InstrumentTypeSelector";
 
 const adminMenuItems = [
@@ -253,6 +254,8 @@ export function Header() {
             </div>
           ) : null}
 
+          <ThemeToggle />
+
           {/* Auth Buttons */}
           {isLoading ? (
             <div className="w-20 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
@@ -284,6 +287,7 @@ export function Header() {
 
         {/* Mobile Navigation Button */}
         <div className="flex md:hidden items-center gap-2">
+          <ThemeToggle />
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md"

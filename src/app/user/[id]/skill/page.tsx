@@ -240,7 +240,7 @@ function SkillContent() {
         </div>
 
         {isHotTableOpen && (
-          <div className="md:bg-white md:dark:bg-gray-800 md:shadow-xl md:rounded-xl md:p-8 md:border md:border-gray-200 md:dark:border-gray-700">
+          <div>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse text-sm table-fixed">
@@ -440,7 +440,7 @@ function SkillContent() {
         </div>
 
         {isOtherTableOpen && (
-          <div className="md:bg-white md:dark:bg-gray-800 md:shadow-xl md:rounded-xl md:p-8 md:border md:border-gray-200 md:dark:border-gray-700">
+          <div>
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse text-sm table-fixed">
@@ -650,7 +650,7 @@ function SkillContent() {
         </div>
 
         {isHistoryTableOpen && (
-          <div className="bg-white dark:bg-gray-800 shadow-xl rounded-xl p-4 md:p-8 border border-gray-200 dark:border-gray-700">
+          <div>
             {selectedHistoryId && (
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">

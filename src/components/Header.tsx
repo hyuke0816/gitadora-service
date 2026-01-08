@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import { toast } from "sonner";
 import { useUserStore } from "@/shared/stores/user.store";
-import { getAuthMe } from "@/entities/auth/api/auth.service";
+import { useAuthMe } from "@/entities/auth/api/auth.queries";
 import { instrumentLabels } from "@/shared/components/InstrumentTypeSelector";
 
 const adminMenuItems = [
@@ -69,7 +69,11 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false); // 데스크탑 드롭다운 메뉴
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // 모바일 메뉴
   const menuRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // React Query 훅 사용 (캐싱 및 중복 호출 방지)
+  const { data: authData, isLoading: isAuthLoading } = useAuthMe();
+  const isLoading = isAuthLoading;
+
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
 
@@ -107,31 +111,23 @@ export function Header() {
     };
   }, [isMobileMenuOpen]);
 
-  // 사용자 정보 조회
+  // 사용자 정보 동기화 (authData가 변경될 때만 실행)
   useEffect(() => {
-    if (!user) {
-      getAuthMe()
-        .then((data) => {
-          if (data.authenticated && data.user) {
-            setUser({
-              id: data.user.userId,
-              gameUserId: data.user.gameUserId,
-              username: data.user.username,
-              role: data.user.role,
-              name: data.user.name || null,
-              ingamename: data.user.ingamename || null,
-              title: data.user.title || null,
-            });
-          }
-          setIsLoading(false);
-        })
-        .catch(() => {
-          setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
+    if (authData?.authenticated && authData.user) {
+      // 이미 같은 유저 정보가 스토어에 있다면 업데이트 생략 (무한루프 방지)
+      if (user?.id === authData.user.userId) return;
+
+      setUser({
+        id: authData.user.userId,
+        gameUserId: authData.user.gameUserId,
+        username: authData.user.username,
+        role: authData.user.role,
+        name: authData.user.name || null,
+        ingamename: authData.user.ingamename || null,
+        title: authData.user.title || null,
+      });
     }
-  }, [user, setUser]);
+  }, [authData, setUser, user]);
 
   // 메뉴 외부 클릭 시 닫기 (데스크탑)
   useEffect(() => {
@@ -161,6 +157,7 @@ export function Header() {
       await fetch("/api/auth/logout", { method: "POST" });
       // 사용자 스토어 초기화
       clearUser();
+      // React Query 캐시 초기화 (필요하다면 queryClient.invalidateQueries 사용)
       router.push("/");
       router.refresh();
     } catch (error) {
@@ -301,7 +298,7 @@ export function Header() {
           ) : /* <Link
               href="/login"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
-            >
+              >
               로그인
             </Link> */
           null}

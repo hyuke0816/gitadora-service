@@ -72,6 +72,9 @@ export async function GET(
       orderBy: {
         playedAt: "desc", // 최신 기록 먼저
       },
+      include: {
+        version: true,
+      },
     });
 
     // 같은 곡/악기타입/난이도/HOT여부의 최신 기록만 필터링 (중복 제거)
@@ -122,6 +125,7 @@ export async function GET(
       isHot: record.isHot,
       playedAt: record.playedAt.toISOString(),
       songId: songIdMap.get(record.songTitle), // 매핑된 곡 ID 추가
+      version: record.version?.name, // 버전명 추가
     }));
 
     // HOT/OTHER 구분하여 정렬

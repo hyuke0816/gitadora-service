@@ -56,7 +56,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.sub;
         // 토큰에 저장된 role 정보를 세션으로 전달
         session.user.role = token.role as UserRole;
+        
+        // 토큰에 게임 프로필 ID가 있으면 사용
         session.user.gameProfileId = token.gameProfileId as number | null;
+
+        // 토큰에 게임 프로필 ID가 없으면 DB에서 조회 (업로드 직후 등 토큰 갱신 전 대응)
+        if (!session.user.gameProfileId) {
+          try {
+            const gameProfile = await prisma.tb_users.findFirst({
+              where: { socialUserId: token.sub },
+              select: { id: true }
+            });
+            if (gameProfile) {
+              session.user.gameProfileId = gameProfile.id;
+            }
+          } catch (error) {
+            console.error("Failed to fetch game profile id in session:", error);
+          }
+        }
+
         session.user.nickname = token.nickname as string | null;
         session.user.bio = token.bio as string | null;
         session.user.isOnboarded = token.isOnboarded as boolean;
@@ -83,6 +101,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         } catch (error) {
           console.error("Failed to fetch game profile id:", error);
           token.gameProfileId = null;
+        }
+      }
+
+      // 토큰에 게임 프로필 ID가 없는데 사용자가 있는 경우 (토큰 갱신 시 재확인)
+      if (!token.gameProfileId && token.sub) {
+        try {
+          const gameProfile = await prisma.tb_users.findFirst({
+            where: { socialUserId: token.sub },
+            select: { id: true }
+          });
+          if (gameProfile) {
+            token.gameProfileId = gameProfile.id;
+          }
+        } catch (error) {
+           // ignore error
         }
       }
 

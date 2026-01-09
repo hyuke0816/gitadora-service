@@ -9,6 +9,7 @@ import DeleteAccountButton from "@/app/user/[id]/myinfo/delete-account-button"; 
 interface OnboardingForm {
   nickname: string;
   bio: string;
+  preferredInstrument: "GUITAR" | "DRUM";
 }
 
 export default function OnboardingPage() {
@@ -28,6 +29,8 @@ export default function OnboardingPage() {
     defaultValues: {
       nickname: session?.user?.nickname || "",
       bio: session?.user?.bio || "",
+      preferredInstrument:
+        (session?.user?.preferredInstrument as "GUITAR" | "DRUM") || "GUITAR",
     },
   });
 
@@ -65,12 +68,12 @@ export default function OnboardingPage() {
           nickname: result.user.nickname,
           bio: result.user.bio,
           isOnboarded: true,
-        }
+          preferredInstrument: result.user.preferredInstrument,
+        },
       });
 
       router.refresh();
-      router.replace("/");
-      
+      router.replace("/dashboard");
     } catch (error: any) {
       setServerError(error.message);
     } finally {
@@ -179,6 +182,37 @@ export default function OnboardingPage() {
               )}
             </div>
 
+            {/* 선호하는 유형 (Instrument) 입력 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                선호하는 유형
+              </label>
+              <div className="flex gap-4">
+                <label className="flex-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="GUITAR"
+                    className="peer sr-only"
+                    {...register("preferredInstrument")}
+                  />
+                  <div className="flex items-center justify-center px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-all font-medium">
+                    GUITAR
+                  </div>
+                </label>
+                <label className="flex-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    value="DRUM"
+                    className="peer sr-only"
+                    {...register("preferredInstrument")}
+                  />
+                  <div className="flex items-center justify-center px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 peer-checked:border-blue-500 peer-checked:bg-blue-50 dark:peer-checked:bg-blue-900/20 peer-checked:text-blue-600 dark:peer-checked:text-blue-400 transition-all font-medium">
+                    DRUM
+                  </div>
+                </label>
+              </div>
+            </div>
+
             {/* 에러 메시지 */}
             {serverError && (
               <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-xl text-center">
@@ -215,10 +249,10 @@ export default function OnboardingPage() {
             <div className="mt-8 pt-8 border-t border-gray-200 dark:border-gray-700">
               <div className="space-y-4">
                 <div className="text-center">
-                    <p className="text-xs text-gray-500 mb-2">
-                        계정을 삭제하시겠습니까?
-                    </p>
-                    <DeleteAccountButton />
+                  <p className="text-xs text-gray-500 mb-2">
+                    계정을 삭제하시겠습니까?
+                  </p>
+                  <DeleteAccountButton />
                 </div>
               </div>
             </div>

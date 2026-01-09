@@ -82,8 +82,8 @@ export function OnboardingForm({
 
       router.refresh();
       if (!isEditMode) {
-        // 처음 생성 시에는 홈으로 이동하거나 원하는 곳으로
-        router.push("/"); 
+        // 처음 생성 시에는 대시보드로 이동
+        router.push("/dashboard"); 
       }
     } catch (error: any) {
       setServerError(error.message);

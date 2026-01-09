@@ -106,6 +106,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: '/login',
   },
   // 북마크릿(Cross-Site)에서의 세션 유지를 위한 쿠키 설정
+  // 로그인 500 에러(PKCE) 해결을 위해 잠시 기본값 사용 (주석 처리)
+  /*
   cookies: {
     pkceCodeVerifier: {
       name: "next-auth.pkce.code_verifier",
@@ -142,6 +144,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     },
   },
+  */
   secret: process.env.AUTH_SECRET, // 명시적 secret 추가 권장
 })
 

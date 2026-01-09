@@ -1,5 +1,5 @@
 import NextAuth, { DefaultSession } from "next-auth"
-import { UserRole } from "@prisma/client"
+import { UserRole, InstrumentType } from "@prisma/client"
 
 declare module "next-auth" {
   /**
@@ -12,6 +12,7 @@ declare module "next-auth" {
       nickname?: string | null
       bio?: string | null
       isOnboarded: boolean
+      preferredInstrument: InstrumentType
     } & DefaultSession["user"]
   }
 
@@ -20,6 +21,7 @@ declare module "next-auth" {
     nickname?: string | null
     bio?: string | null
     isOnboarded: boolean
+    preferredInstrument: InstrumentType
   }
 }
 
@@ -30,5 +32,6 @@ declare module "next-auth/jwt" {
     nickname?: string | null
     bio?: string | null
     isOnboarded: boolean
+    preferredInstrument: InstrumentType
   }
 }

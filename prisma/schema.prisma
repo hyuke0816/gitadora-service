@@ -115,6 +115,7 @@ model User {
   nickname      String?
   bio           String?   @db.VarChar(100) // 100자 제한
   isOnboarded   Boolean   @default(false)
+  preferredInstrument InstrumentType @default(GUITAR)
   role          UserRole  @default(USER)
   accounts      Account[]
   sessions      Session[]

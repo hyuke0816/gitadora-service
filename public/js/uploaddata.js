@@ -13,10 +13,10 @@
   // 설정: 서버 URL (실제 배포 시 변경 필요)
   // 로컬 개발 (HTTPS): https://localhost:30001 (포트 확인 필요!)
   // 프로덕션: 실제 서버 도메인으로 변경 (예: https://your-domain.com)
-  const API_BASE_URL = "https://localhost:30001"; // 로컬 개발 환경 (HTTPS)
+  // const API_BASE_URL = "https://localhost:30001"; // 로컬 개발 환경 (HTTPS)
 
   // 프로덕션 환경에서는 아래 주석을 해제하고 위의 localhost를 주석 처리하세요:
-  // const API_BASE_URL = "https://gitadora.info";
+  const API_BASE_URL = "https://gitadora.info";
 
   // 난이도 클래스명에서 난이도 추출
   function getDifficultyFromClass(className) {
@@ -233,7 +233,9 @@
 
     // 로딩 메시지 업데이트 함수
     const updateProgress = () => {
-      updateLoadingMessage(`데이터 수집 중...\n${collectedCount}/${pages.length} 페이지 완료`);
+      updateLoadingMessage(
+        `데이터 수집 중...\n${collectedCount}/${pages.length} 페이지 완료`
+      );
     };
 
     updateProgress();
@@ -273,22 +275,22 @@
   async function createLoadingOverlay() {
     // 1. SweetAlert2가 로드될 때까지 기다림 (최대 2초)
     try {
-        await loadSweetAlert2();
-        if (window.Swal) {
-            window.Swal.fire({
-                title: '데이터 처리 중...',
-                html: '잠시만 기다려주세요.',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    window.Swal.showLoading();
-                }
-            });
-            return true; // Swal 사용됨
-        }
+      await loadSweetAlert2();
+      if (window.Swal) {
+        window.Swal.fire({
+          title: "데이터 처리 중...",
+          html: "잠시만 기다려주세요.",
+          allowOutsideClick: false,
+          didOpen: () => {
+            window.Swal.showLoading();
+          },
+        });
+        return true; // Swal 사용됨
+      }
     } catch (e) {
-        console.warn("Swal loading failed for overlay:", e);
+      console.warn("Swal loading failed for overlay:", e);
     }
-    
+
     // 2. Swal 로드 실패 시 기존 DOM 오버레이 사용 (Fallback)
     // 이미 존재하는 오버레이가 있으면 제거
     const existing = document.getElementById("gitadora-loading-overlay");
@@ -382,9 +384,9 @@
   function removeLoadingOverlay() {
     // Swal이 열려있으면 닫기
     if (window.Swal && window.Swal.isVisible()) {
-        window.Swal.close();
+      window.Swal.close();
     }
-    
+
     // DOM 오버레이가 있으면 제거
     const overlay = document.getElementById("gitadora-loading-overlay");
     if (overlay) {
@@ -543,31 +545,31 @@
 
   // 로딩 메시지 업데이트 함수
   function updateLoadingMessage(messageText) {
-      if (window.Swal && window.Swal.isVisible()) {
-          // Swal 로딩 메시지 업데이트
-          const content = window.Swal.getHtmlContainer();
-          if (content) content.textContent = messageText;
-      } else {
-          // DOM 오버레이 메시지 업데이트 (Fallback)
-          const overlay = document.getElementById("gitadora-loading-overlay");
-          if (overlay) {
-            const contentBox = overlay.querySelector("div");
-            if (contentBox) {
-              const message = contentBox.firstElementChild;
-              if (message) {
-                message.textContent = messageText;
-                message.style.whiteSpace = "pre-line";
-              }
-            }
+    if (window.Swal && window.Swal.isVisible()) {
+      // Swal 로딩 메시지 업데이트
+      const content = window.Swal.getHtmlContainer();
+      if (content) content.textContent = messageText;
+    } else {
+      // DOM 오버레이 메시지 업데이트 (Fallback)
+      const overlay = document.getElementById("gitadora-loading-overlay");
+      if (overlay) {
+        const contentBox = overlay.querySelector("div");
+        if (contentBox) {
+          const message = contentBox.firstElementChild;
+          if (message) {
+            message.textContent = messageText;
+            message.style.whiteSpace = "pre-line";
           }
+        }
       }
+    }
   }
 
   // 메인 실행 함수
   async function main() {
     // 로딩 오버레이 표시
     await createLoadingOverlay();
-    
+
     // SweetAlert2 로드 시작 (백그라운드) - 이미 createLoadingOverlay에서 로드되었을 수 있음
     // const swalPromise = loadSweetAlert2().catch(err => console.warn("Swal load failed, fallback to alert", err));
 
@@ -584,10 +586,10 @@
         const Swal = window.Swal;
         if (Swal) {
           Swal.fire({
-            icon: 'error',
-            title: 'GITADORA ID 누락',
-            text: 'GITADORA ID를 찾을 수 없습니다.\n로그인 상태를 확인하거나, 프로필 페이지(playdata/profile.html)에 한 번 접속한 후 다시 시도해주세요.',
-            confirmButtonText: '확인'
+            icon: "error",
+            title: "GITADORA ID 누락",
+            text: "GITADORA ID를 찾을 수 없습니다.\n로그인 상태를 확인하거나, 프로필 페이지(playdata/profile.html)에 한 번 접속한 후 다시 시도해주세요.",
+            confirmButtonText: "확인",
           });
         } else {
           alert(
@@ -605,10 +607,10 @@
         const Swal = window.Swal;
         if (Swal) {
           Swal.fire({
-            icon: 'warning',
-            title: '데이터 없음',
-            html: '추출된 데이터가 없습니다.<br><br>다음을 확인해주세요:<br>1. 스킬 페이지(playdata/skill.html)에서 실행했는지<br>2. 브라우저 콘솔에 오류가 없는지',
-            confirmButtonText: '확인'
+            icon: "warning",
+            title: "데이터 없음",
+            html: "추출된 데이터가 없습니다.<br><br>다음을 확인해주세요:<br>1. 스킬 페이지(playdata/skill.html)에서 실행했는지<br>2. 브라우저 콘솔에 오류가 없는지",
+            confirmButtonText: "확인",
           });
         } else {
           alert(
@@ -621,7 +623,9 @@
       console.log(`총 ${records.length}개 기록 추출됨`);
 
       // 로딩 오버레이 메시지 업데이트
-      updateLoadingMessage(`데이터 추출 완료!\n총 ${records.length}개\n업로드 중...`);
+      updateLoadingMessage(
+        `데이터 추출 완료!\n총 ${records.length}개\n업로드 중...`
+      );
 
       // 3. 서버로 업로드
       const version = getVersionName();
@@ -645,10 +649,10 @@
         const Swal = window.Swal;
         if (Swal) {
           Swal.fire({
-            icon: 'error',
-            title: '업로드 실패',
+            icon: "error",
+            title: "업로드 실패",
             text: result.message || "알 수 없는 오류",
-            confirmButtonText: '확인'
+            confirmButtonText: "확인",
           });
         } else {
           alert(
@@ -659,14 +663,14 @@
     } catch (error) {
       removeLoadingOverlay();
       console.error("Main execution error:", error);
-      
+
       const Swal = window.Swal;
       if (Swal) {
         Swal.fire({
-            icon: 'error',
-            title: '오류 발생',
-            text: error.message || "알 수 없는 오류",
-            confirmButtonText: '확인'
+          icon: "error",
+          title: "오류 발생",
+          text: error.message || "알 수 없는 오류",
+          confirmButtonText: "확인",
         });
       } else {
         alert("오류가 발생했습니다: " + (error.message || "알 수 없는 오류"));

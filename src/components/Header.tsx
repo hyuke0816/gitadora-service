@@ -3,61 +3,84 @@
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSession, signOut } from "next-auth/react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { instrumentLabels } from "@/shared/components/InstrumentTypeSelector";
 
-const adminMenuItems = [
+interface MenuItem {
+  title: string;
+  href?: string;
+  children?: MenuItem[];
+}
+
+const adminMenuItems: MenuItem[] = [
   {
-    title: "버전 정보 관리",
-    href: "/admin/versions",
-  },
-  {
-    title: "작곡가 정보 관리",
-    href: "/admin/artists",
-  },
-  {
-    title: "노래 정보 관리",
-    href: "/admin/songs",
-  },
-  {
-    title: "태그 정보 관리",
-    href: "/admin/tags",
-  },
-  {
-    title: "이벤트 관리",
-    href: "/admin/events",
-  },
+    title: "관리자 메뉴",
+    children: [
+      {
+        title: "버전 정보 관리",
+        href: "/admin/versions",
+      },
+      {
+        title: "작곡가 정보 관리",
+        href: "/admin/artists",
+      },
+      {
+        title: "노래 정보 관리",
+        href: "/admin/songs",
+      },
+      {
+        title: "태그 정보 관리",
+        href: "/admin/tags",
+      },
+      {
+        title: "이벤트 관리",
+        href: "/admin/events",
+      },
+    ]
+  }
 ];
 
-const getUserMenuItems = (userId: string | null) => {
-  const items = [
+const getUserMenuItems = (userId: string | null): MenuItem[] => {
+  const userSectionChildren: MenuItem[] = [
     {
       title: "유저목록",
       href: `/user/list`,
     },
-    {
-      title: "노래정보",
-      href: `/user/songs`,
-    },
-    {
-      title: "버전정보",
-      href: `/user/versions`,
-    },
-    {
-      title: "작곡가정보",
-      href: `/user/artists`,
-    },
   ];
 
+  // 로그인 시 내 스킬 보기 메뉴 추가
   if (userId) {
-    items.unshift({
-      title: "내 정보 관리",
-      href: `/user/${userId}/myinfo`,
+    userSectionChildren.unshift({
+      title: "내 스킬 보기",
+      href: `/user/${userId}/skill`,
     });
   }
 
-  return items;
+  return [
+    {
+      title: "유저 정보",
+      children: userSectionChildren,
+    },
+    {
+      title: "게임 정보",
+      children: [
+        {
+          title: "노래정보",
+          href: `/user/songs`,
+        },
+        {
+          title: "버전정보",
+          href: `/user/versions`,
+        },
+        {
+          title: "작곡가정보",
+          href: `/user/artists`,
+        },
+      ],
+    },
+  ];
 };
 
 export function Header() {
@@ -65,9 +88,12 @@ export function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // 데스크탑 드롭다운 메뉴
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // 모바일 메뉴
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isLoading = status === "loading";
   const user = session?.user;
@@ -109,27 +135,9 @@ export function Header() {
     };
   }, [isMobileMenuOpen]);
 
-  // 메뉴 외부 클릭 시 닫기 (데스크탑)
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    if (isMenuOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isMenuOpen]);
-
   // 경로 변경 시 모바일 메뉴 닫기
   useEffect(() => {
     setIsMobileMenuOpen(false);
-    setIsMenuOpen(false);
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -174,9 +182,10 @@ export function Header() {
   };
 
   const handleUserClick = () => {
+    // 게임 프로필이 있으면 해당 ID 사용, 없으면 'me' 사용
     const targetPath = user?.gameProfileId
       ? `/user/${user.gameProfileId}/myinfo`
-      : "/onboarding";
+      : "/user/me/myinfo";
 
     if (pathname !== targetPath) {
       router.push(targetPath);
@@ -201,88 +210,87 @@ export function Header() {
         </div>
 
         {/* Desktop Navigation */}
-        <div className="hidden md:flex items-center gap-3">
-          {/* Menu Dropdown (Admin or User) */}
-          {isLoading ? null : menuItems.length > 0 ? (
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-              >
-                <span>메뉴</span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    isMenuOpen ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
+        <div className="hidden md:flex items-center gap-6">
+          {/* Desktop Menu Items */}
+          {!isLoading && menuItems.length > 0 && (
+            <nav className="flex items-center gap-6 mr-2">
+              {menuItems.map((item, index) => (
+                <div key={index} className="relative group py-4">
+                  <button className="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center gap-1">
+                    {item.title}
+                    <svg
+                      className="w-4 h-4 transition-transform group-hover:rotate-180 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
 
-              {isMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2">
-                  {menuItems.map((item) => {
-                    const isActive =
-                      pathname === item.href ||
-                      pathname?.startsWith(item.href + "/");
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setIsMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-2 text-sm transition-colors ${
-                          isActive
-                            ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium"
-                            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        }`}
-                      >
-                        {/* 아이콘 제거됨 */}
-                        <span>{item.title}</span>
-                      </Link>
-                    );
-                  })}
+                  {/* Dropdown Menu */}
+                  {item.children && (
+                    <div className="absolute left-1/2 -translate-x-1/2 top-full w-48 py-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top translate-y-2 group-hover:translate-y-0 z-50">
+                      {item.children.map((child) => {
+                        const isActive =
+                          pathname === child.href ||
+                          pathname?.startsWith(child.href + "/");
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href!}
+                            className={`block px-4 py-2 text-sm transition-colors ${
+                              isActive
+                                ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium"
+                                : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            }`}
+                          >
+                            {child.title}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ) : null}
-
-          <ThemeToggle />
-
-          {/* Auth Buttons */}
-          {isLoading ? (
-            <div className="w-20 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          ) : user ? (
-            <>
-              {/* 프로필 이미지 제거됨 */}
-              <button
-                onClick={handleUserClick}
-                className="flex items-center gap-2 px-2 py-1 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-              >
-                {user.nickname || user.name}
-              </button>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-              >
-                로그아웃
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
-            >
-              로그인
-            </Link>
+              ))}
+            </nav>
           )}
+
+          <div className="flex items-center gap-3 pl-3 border-l border-gray-200 dark:border-gray-700">
+            <ThemeToggle />
+
+            {/* Auth Buttons */}
+            {isLoading ? (
+              <div className="w-20 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            ) : user ? (
+              <>
+                <button
+                  onClick={handleUserClick}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                >
+                  {user.nickname || user.name}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
+              >
+                로그인
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Mobile Navigation Button */}
@@ -354,77 +362,134 @@ export function Header() {
         </div>
       )}
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-4 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
-          <div className="flex flex-col space-y-4">
-            {/* User Info / Auth Status */}
-            {isLoading ? (
-              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full" />
-            ) : user ? (
-              <button
-                onClick={handleUserClick}
-                className="w-full flex flex-col gap-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer text-left"
-              >
-                <div className="flex items-center gap-2">
-                  {/* 프로필 이미지 제거됨 */}
-                  <div className="font-medium text-gray-900 dark:text-gray-100">
-                    {user.nickname || user.name}
-                  </div>
-                </div>
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                className="flex items-center justify-center w-full px-4 py-3 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-md transition-colors"
-              >
-                로그인
-              </Link>
-            )}
+      {/* Mobile Menu Overlay (Drawer) */}
+      {mounted &&
+        createPortal(
+          <div
+            className={`md:hidden fixed inset-0 z-[100] transition-all duration-300 ${
+              isMobileMenuOpen ? "visible" : "invisible pointer-events-none"
+            }`}
+          >
+            {/* Backdrop */}
+            <div
+              className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${
+                isMobileMenuOpen ? "opacity-100" : "opacity-0"
+              }`}
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
 
-            {/* Menu Items */}
-            {menuItems.length > 0 && (
-              <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-800">
-                <div className="px-2 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                  메뉴
-                </div>
-                {menuItems.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    pathname?.startsWith(item.href + "/");
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${
-                        isActive
-                          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
+            {/* Drawer Panel */}
+            <div
+              className={`absolute right-0 top-0 bottom-0 w-[280px] bg-white dark:bg-gray-900 shadow-2xl transition-transform duration-300 ease-out transform ${
+                isMobileMenuOpen ? "translate-x-0" : "translate-x-full"
+              }`}
+            >
+              <div className="flex flex-col h-full overflow-y-auto">
+                {/* Drawer Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
+                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    메뉴
+                  </span>
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      {/* 아이콘 제거됨 */}
-                      <span>{item.title}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
-            {/* Logout */}
-            <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-              {user && (
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors text-left"
-                >
-                  {/* 아이콘 제거됨 */}
-                  <span>로그아웃</span>
-                </button>
-              )}
+                {/* Menu Content */}
+                <div className="flex-1 p-4 space-y-6">
+                  {isLoading ? (
+                    <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full" />
+                  ) : user ? (
+                    <div className="space-y-3">
+                      <button
+                        onClick={handleUserClick}
+                        className="w-full flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-bold text-lg shrink-0">
+                          {(user.nickname || user.name || "U")[0]}
+                        </div>
+                        <div className="text-left overflow-hidden">
+                          <div className="font-semibold text-gray-900 dark:text-gray-100 truncate">
+                            {user.nickname || user.name}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            내 정보 보기
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="flex items-center justify-center w-full px-4 py-3 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-sm"
+                    >
+                      로그인 / 회원가입
+                    </Link>
+                  )}
+
+                  {menuItems.length > 0 && (
+                    <div className="space-y-6">
+                      {menuItems.map((section, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <div className="px-2 pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            {section.title}
+                          </div>
+                          {section.children?.map((item) => {
+                            const isActive =
+                              pathname === item.href ||
+                              pathname?.startsWith(item.href + "/");
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href!}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                                  isActive
+                                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-semibold"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                                }`}
+                              >
+                                <span>{item.title}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Drawer Footer */}
+                <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+                  {user && (
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-colors font-medium"
+                    >
+                      로그아웃
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </header>
   );
 }

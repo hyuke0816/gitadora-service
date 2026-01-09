@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, Suspense } from "react";
+import { useState, useRef, Suspense, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useSession } from "next-auth/react";
 import { format } from "date-fns";
 import { SkillPageSkeleton } from "@/components/Skeleton";
 import { getSkillColorStyle } from "@/shared/utils/skill.utils";
@@ -43,10 +44,24 @@ function SkillContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const userId = parseInt(params.id as string);
 
-  const instrumentType =
-    (searchParams.get("instrumentType") as "GUITAR" | "DRUM") || "GUITAR";
+  const queryInstrumentType = searchParams.get("instrumentType") as "GUITAR" | "DRUM" | null;
+  const preferredInstrument = session?.user?.preferredInstrument as "GUITAR" | "DRUM" | undefined;
+
+  // 1. URL 파라미터 우선, 2. 선호 악기, 3. 기본값
+  const instrumentType = queryInstrumentType || preferredInstrument || "GUITAR";
+
+  // URL에 악기 타입이 명시되지 않았고, 선호 악기가 있는 경우 URL 업데이트
+  useEffect(() => {
+    if (!queryInstrumentType && preferredInstrument) {
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.set("instrumentType", preferredInstrument);
+      router.replace(`?${newParams.toString()}`, { scroll: false });
+    }
+  }, [queryInstrumentType, preferredInstrument, router, searchParams]);
+
   const versionParam = searchParams.get("versionId");
 
   // 곡 클릭 핸들러

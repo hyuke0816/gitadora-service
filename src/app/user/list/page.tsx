@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -24,9 +25,24 @@ import {
 const columnHelper = createColumnHelper<UserList>();
 
 function UserListContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const instrumentType =
-    (searchParams.get("instrumentType") as "GUITAR" | "DRUM") || "GUITAR";
+  const { data: session } = useSession();
+
+  const queryInstrumentType = searchParams.get("instrumentType") as "GUITAR" | "DRUM" | null;
+  const preferredInstrument = session?.user?.preferredInstrument as "GUITAR" | "DRUM" | undefined;
+
+  // URL 파라미터가 있으면 그것을 따르고, 없으면 유저의 선호 악기, 그것도 없으면 GUITAR
+  const instrumentType = queryInstrumentType || preferredInstrument || "GUITAR";
+
+  // URL에 악기 타입이 명시되지 않았고, 선호 악기가 있는 경우 URL 업데이트 (선택 사항이지만 명시적인 게 좋음)
+  useEffect(() => {
+    if (!queryInstrumentType && preferredInstrument) {
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.set("instrumentType", preferredInstrument);
+      router.replace(`?${newParams.toString()}`, { scroll: false });
+    }
+  }, [queryInstrumentType, preferredInstrument, router, searchParams]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [sorting, setSorting] = useState<SortingState>([

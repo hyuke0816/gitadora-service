@@ -24,6 +24,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: role,
           emailVerified: profile.email_verified ? new Date() : null,
           isOnboarded: false,
+          preferredInstrument: "GUITAR", // 기본값
         }
       },
     }),
@@ -59,6 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.nickname = token.nickname as string | null;
         session.user.bio = token.bio as string | null;
         session.user.isOnboarded = token.isOnboarded as boolean;
+        session.user.preferredInstrument = token.preferredInstrument as any;
       }
       return session;
     },
@@ -69,6 +71,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.nickname = user.nickname;
         token.bio = user.bio;
         token.isOnboarded = user.isOnboarded;
+        token.preferredInstrument = user.preferredInstrument;
         
         // 게임 프로필 ID 조회 및 토큰에 저장
         try {
@@ -90,6 +93,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
         if (session.user.isOnboarded !== undefined) {
           token.isOnboarded = session.user.isOnboarded;
+        }
+        if (session.user.preferredInstrument !== undefined) {
+          token.preferredInstrument = session.user.preferredInstrument;
         }
       }
 

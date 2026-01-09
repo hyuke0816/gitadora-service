@@ -2,10 +2,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/shared/lib/prisma";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { InstrumentType } from "@prisma/client";
 
 const onboardingSchema = z.object({
   nickname: z.string().optional().or(z.literal("")),
   bio: z.string().max(50, "자기소개는 50자 이내로 작성해주세요.").optional(),
+  preferredInstrument: z.enum(["GUITAR", "DRUM", "BASS", "OPEN"]).optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -43,6 +45,7 @@ export async function PATCH(req: Request) {
         nickname: nicknameToSave,
         bio: validatedData.bio || "",
         isOnboarded: true,
+        preferredInstrument: validatedData.preferredInstrument || "GUITAR",
       },
     });
 
@@ -53,6 +56,7 @@ export async function PATCH(req: Request) {
           nickname: updatedUser.nickname,
           bio: updatedUser.bio,
           isOnboarded: updatedUser.isOnboarded,
+          preferredInstrument: updatedUser.preferredInstrument,
         },
       },
       { status: 200 }

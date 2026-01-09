@@ -107,6 +107,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   // 북마크릿(Cross-Site)에서의 세션 유지를 위한 쿠키 설정
   cookies: {
+    pkceCodeVerifier: {
+      name: "next-auth.pkce.code_verifier",
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        path: "/",
+        secure: true,
+      },
+    },
     sessionToken: {
       name: `next-auth.session-token`,
       options: {

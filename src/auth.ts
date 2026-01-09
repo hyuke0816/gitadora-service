@@ -2,7 +2,7 @@ import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/shared/lib/prisma"
-import { UserRole } from "@prisma/client"
+import { UserRole, InstrumentType } from "@prisma/client"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
@@ -24,7 +24,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: role,
           emailVerified: profile.email_verified ? new Date() : null,
           isOnboarded: false,
-          preferredInstrument: "GUITAR", // 기본값
+          preferredInstrument: InstrumentType.GUITAR, // 기본값
         }
       },
     }),

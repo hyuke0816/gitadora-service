@@ -49,3 +49,4 @@ public/image/thumbnail
 
 # database
 *.sql
+!prisma/migrations/**/*.sql

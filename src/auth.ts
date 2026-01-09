@@ -1,38 +1,19 @@
 import NextAuth from "next-auth"
-import Google from "next-auth/providers/google"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/shared/lib/prisma"
-import { UserRole, InstrumentType } from "@prisma/client"
+import { UserRole } from "@prisma/client"
+import { authConfig } from "./auth.config"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  trustHost: true,
   adapter: PrismaAdapter(prisma) as any,
-  providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-      profile(profile) {
-        // 환경 변수에 설정된 이메일은 가입 시 자동으로 ADMIN 권한 부여
-        const adminEmail = process.env.ADMIN_EMAIL;
-        const role = (adminEmail && profile.email === adminEmail) ? UserRole.ADMIN : UserRole.USER;
-        
-        return {
-          id: profile.sub,
-          name: profile.name,
-          email: profile.email,
-          image: profile.picture,
-          role: role,
-          emailVerified: profile.email_verified ? new Date() : null,
-          isOnboarded: false,
-          preferredInstrument: InstrumentType.GUITAR, // 기본값
-        }
-      },
-    }),
-  ],
-  session: {
-    strategy: "jwt",
-  },
+  ...authConfig,
+  // Providers는 authConfig에서 가져오므로 중복 정의 불필요하지만,
+  // NextAuth가 병합 처리를 하므로 명시적으로 다시 적지 않아도 됨.
+  
   callbacks: {
+    ...authConfig.callbacks, // 기본 경량 콜백 가져오기
+    
+    // DB 사용이 필요한 로직으로 오버라이드
     async signIn({ user }) {
       const adminEmail = process.env.ADMIN_EMAIL;
       
@@ -52,12 +33,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
     async session({ session, token }) {
+      // 기본 매핑 실행 (authConfig의 로직과 유사하지만 DB 로직 추가를 위해 다시 정의)
       if (token?.sub && session.user) {
         session.user.id = token.sub;
-        // 토큰에 저장된 role 정보를 세션으로 전달
         session.user.role = token.role as UserRole;
         
-        // 토큰에 게임 프로필 ID가 있으면 사용
         session.user.gameProfileId = token.gameProfileId as number | null;
 
         // 토큰에 게임 프로필 ID가 없으면 DB에서 조회 (업로드 직후 등 토큰 갱신 전 대응)
@@ -85,13 +65,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role; // 로그인 시 user 객체의 role을 토큰에 저장
+        token.role = user.role; 
         token.nickname = user.nickname;
         token.bio = user.bio;
         token.isOnboarded = user.isOnboarded;
         token.preferredInstrument = user.preferredInstrument;
         
-        // 게임 프로필 ID 조회 및 토큰에 저장
+        // 게임 프로필 ID 조회 및 토큰에 저장 (DB 사용)
         try {
           const gameProfile = await prisma.tb_users.findFirst({
             where: { socialUserId: user.id },
@@ -135,22 +115,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
   },
-  pages: {
-    signIn: '/login',
-  },
-  // 북마크릿(Cross-Site)에서의 세션 유지를 위한 쿠키 설정
-  // PKCE 에러 해결을 위한 쿠키 설정 수정 (Lax 모드 사용)
-  cookies: {
-    pkceCodeVerifier: {
-      name: "next-auth.pkce.code_verifier",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: process.env.NODE_ENV === "production",
-      },
-    },
-  },
-  secret: process.env.AUTH_SECRET, // 명시적 secret 추가 권장
 })
-

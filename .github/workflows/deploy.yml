@@ -12,6 +12,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (CI에서 수행)
+        run: npm run build
+
+      # 필요 파일만 압축
+      - name: Archive build artifacts
+        run: |
+          tar -czf deploy.tar.gz \
+            .next \
+            public \
+            package.json \
+            package-lock.json \
+            prisma
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -19,19 +41,28 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to Server
+      - name: Upload build to server
+        run: |
+          scp deploy.tar.gz \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/bitnami/gitadora-service/
+
+      - name: Deploy on server
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
             set -e
             cd /home/bitnami/gitadora-service
 
-            git pull origin main
-            npm install
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
 
-            # Prisma (마이그레이션 있을 때만 반영)
+            # 의존성은 최초 1회만
+            if [ ! -d node_modules ]; then
+              npm ci --omit=dev
+            fi
+
+            # Prisma (운영 반영용)
             npx prisma migrate deploy || true
 
-            npm run build
-
-            pm2 reload gitadora-service || pm2 start npm --name gitadora-service -- start
+            pm2 reload gitadora-service \
+              || pm2 start npm --name gitadora-service -- start
           EOF

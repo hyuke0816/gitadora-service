@@ -87,7 +87,7 @@ export default async function MyInfoPage({
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">프로필 정보</h2>
             <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                {user.role === UserRole.ADMIN ? '관리자' : '일반 유저'}
+                {session.user.role === UserRole.ADMIN ? '관리자' : '일반 유저'}
             </span>
         </div>
         

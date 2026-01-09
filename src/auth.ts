@@ -106,45 +106,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: '/login',
   },
   // 북마크릿(Cross-Site)에서의 세션 유지를 위한 쿠키 설정
-  // 로그인 500 에러(PKCE) 해결을 위해 잠시 기본값 사용 (주석 처리)
-  /*
+  // PKCE 에러 해결을 위한 쿠키 설정 수정 (Lax 모드 사용)
   cookies: {
     pkceCodeVerifier: {
       name: "next-auth.pkce.code_verifier",
       options: {
         httpOnly: true,
-        sameSite: "none",
+        sameSite: "lax",
         path: "/",
-        secure: true,
-      },
-    },
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'none',
-        path: '/',
-        secure: true,
-      },
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        sameSite: 'none',
-        path: '/',
-        secure: true,
-      },
-    },
-    csrfToken: {
-      name: `next-auth.csrf-token`,
-      options: {
-        sameSite: 'none',
-        path: '/',
-        secure: true,
+        secure: process.env.NODE_ENV === "production",
       },
     },
   },
-  */
   secret: process.env.AUTH_SECRET, // 명시적 secret 추가 권장
 })
 
